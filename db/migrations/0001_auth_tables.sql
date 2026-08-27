@@ -1,5 +1,6 @@
 CREATE TABLE `account` (
 	`id` text PRIMARY KEY NOT NULL,
+	`issuer` text NOT NULL,
 	`account_id` text NOT NULL,
 	`provider_id` text NOT NULL,
 	`user_id` text NOT NULL,

@@ -1,7 +1,15 @@
-// このファイルは @better-auth/cli generate による自動生成。
-// Better Auth が期待する列名・型に合わせる必要があるため、手で編集しない。
-// 再生成する場合は、cloudflare:workers に依存しない一時的な設定を作って
-// `npx @better-auth/cli generate --config <その設定> --output src/db/auth-schema.ts` を実行する。
+// Better Auth が期待する列名・型に合わせる必要があるファイル。
+//
+// 大半は `@better-auth/cli generate` の出力だが、この CLI は deprecated で
+// 1.5 系までしか無く、better-auth 1.7 が要求する account.issuer が生成されない。
+// そのため CLI の出力をそのまま使うと、ログイン時に
+//   BetterAuthError: The field "issuer" does not exist in the schema for the model "account"
+// で失敗する。
+//
+// 正解は better-auth 自身が持っている。ズレが疑われるときは次で突き合わせる:
+//   import { getAuthTables } from 'better-auth/db'
+//   getAuthTables({ socialProviders: { google: { clientId:'x', clientSecret:'y' } } })
+// これがモデルごとの必須フィールドを返すので、このファイルと比較する。
 //
 // アプリ側の「管理者は1人だけ」という制約はこのスキーマでは表現しない。
 // ログインできること自体は権限を意味しないため、ADMIN_GOOGLE_EMAIL との
@@ -52,6 +60,8 @@ export const account = sqliteTable(
   "account",
   {
     id: text("id").primaryKey(),
+    // better-auth 1.7 で追加。CLI(1.4系)の出力には含まれない。
+    issuer: text("issuer").notNull(),
     accountId: text("account_id").notNull(),
     providerId: text("provider_id").notNull(),
     userId: text("user_id")
