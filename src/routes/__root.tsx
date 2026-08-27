@@ -20,7 +20,14 @@ export const Route = createRootRoute({
         content: '人生で記憶に残した場所を、地図という形でコレクションする。',
       },
     ],
-    links: [{ rel: 'stylesheet', href: appCss }],
+    links: [
+      { rel: 'stylesheet', href: appCss },
+      /*
+       * 地図のピンと同じ色・同じ形にして、タブでも何のアプリか分かるようにする。
+       * SVG 1枚で全サイズを賄う。
+       */
+      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+    ],
   }),
   shellComponent: RootDocument,
   // 既定の <p>Not Found</p> や生のエラーをそのまま出さない
