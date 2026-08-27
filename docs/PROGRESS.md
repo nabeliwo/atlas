@@ -20,7 +20,7 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 ## 現在地
 
 - **現在フェーズ**: Phase 5 — 仕上げ
-- **状態**: デプロイ実行を除いて Definition of Done を達成
+- **状態**: 本番へデプロイ済み。Google のリダイレクトURI登録とログイン確認が残り
 - **最終更新**: 2026-08-27
 
 `pnpm db:reset && pnpm dev` でローカル環境が立ち上がる（詳細は README「開発」）。
@@ -144,11 +144,11 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 ## 未決事項 / ブロッカー
 
 - [ ] 地図タイル provider の最終決定（暫定で OpenFreeMap positron を使用中。`docs/06-technical-design.md` が候補に挙げる MapTiler を採用する場合はライセンス確認が必要）
-- [ ] 本番 D1 の作成と `wrangler.jsonc` の `database_id` 差し替え
-- [ ] 本番 secrets の登録（`wrangler secret put`）
-- [ ] `wrangler.jsonc` の `vars.BETTER_AUTH_URL` を実際のデプロイ先URLに合わせる
+- [x] 本番 D1 の作成と `wrangler.jsonc` の `database_id` 差し替え
+- [x] 本番 secrets の登録（`wrangler secret put`）
+- [x] `wrangler.jsonc` の `vars.BETTER_AUTH_URL` を実際のデプロイ先URLに合わせる
 - [ ] Google OAuth クライアントに本番のリダイレクトURIを追加
-- [ ] 独自ドメインは使わない方針（workers.dev のまま）
+- [x] 独自ドメインは使わない方針（workers.dev のまま）
 - [x] 施設検索 provider の API キー取得（Geoapify）— 2026-08-27 完了、実 API で疎通確認済み
 - [x] Google OAuth クライアント（client id / secret）の用意 — 2026-08-27 完了
 - [x] `ADMIN_GOOGLE_EMAIL` に入れるアドレスの確定 — 2026-08-27 完了
@@ -163,6 +163,20 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 ## 作業ログ
 
 新しいものを上に追記する。
+
+### 2026-08-27 — 本番へデプロイ
+- 本番 D1 `atlas-db` を作成し、マイグレーションを適用（データは空。seed は入れない）
+- secrets 5件を登録。`BETTER_AUTH_SECRET` は開発と別の値にした
+  （開発用が漏れても本番のセッションを偽造されないようにするため）
+- https://atlas.nabeliwo.workers.dev へデプロイ
+
+**詰まった点**
+- `wrangler d1 create` が `wrangler.jsonc` に `atlas_db` という別バインディングを
+  追記していた。アプリは `env.DB` を参照するため、そのままでは本番でDBに繋がらない。
+  既存の `DB` バインディングに ID を入れる形へ統合した。
+- `pnpm deploy` は pnpm 自身のコマンドと衝突する。`pnpm run deploy` が正しい。
+- workers.dev のサブドメインは Worker ごとではなくアカウント全体に1つ。
+  当初 `pokeca-buyback` だったものを `nabeliwo` へ変更した（反映に約2分）。
 
 ### 2026-08-27 — Phase 5 実装完了（デプロイ実行を除く）
 - プロフィールの表示（公開地図の小さなチップ）と編集（`/admin`）

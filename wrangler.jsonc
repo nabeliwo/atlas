@@ -14,21 +14,22 @@
 
   "d1_databases": [
     {
+      // アプリ側は env.DB で参照する。バインディング名を変えるとコードが動かない。
       "binding": "DB",
       "database_name": "atlas-db",
-      // ローカル開発では使われない。デプロイ前に
-      //   npx wrangler d1 create atlas-db
-      // で得た実IDへ差し替える（手順は README「デプロイ」）。
-      "database_id": "local-placeholder-id",
+      // `npx wrangler d1 create atlas-db` で作成した本番DBのID。
+      // これ単体ではアクセスできない識別子なので、秘密情報ではない。
+      // ローカル開発では使われない（.wrangler/state 以下の SQLite を見る）。
+      "database_id": "e9bfa1a8-8834-4c4a-a7cb-4c4fc14b7409",
       "migrations_dir": "db/migrations"
     }
   ],
 
-  // 本番の BETTER_AUTH_URL。デプロイ後の workers.dev のURLに合わせる。
-  // 独自ドメインを使う場合はそのURLにする。
+  // 本番の BETTER_AUTH_URL。デプロイ先の URL と一致している必要がある。
   // これが実際のURLと違うと OAuth のコールバックが成立しない。
+  // ローカル開発では .dev.vars の値が優先されるため影響しない。
   "vars": {
-    "BETTER_AUTH_URL": "https://atlas.workers.dev"
+    "BETTER_AUTH_URL": "https://atlas.nabeliwo.workers.dev"
   }
 
   /**
@@ -37,6 +38,5 @@
    * - BETTER_AUTH_SECRET
    * - ADMIN_GOOGLE_EMAIL
    * - PLACE_SEARCH_API_KEY
-   * - MAP_TILE_API_KEY
    */
 }

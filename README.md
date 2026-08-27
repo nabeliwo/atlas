@@ -2,6 +2,8 @@
 
 人生で記憶に残した場所を、地図という形でコレクションする個人プロダクト。
 
+公開URL: https://atlas.nabeliwo.workers.dev
+
 このリポジトリの実装前提は `docs/` 以下にまとまっています。Claude Code / Codex は、まず以下の順で読んでください。
 
 1. `docs/00-philosophy.md`
@@ -81,21 +83,36 @@ npx wrangler secret put PLACE_SEARCH_API_KEY
 ```
 
 `BETTER_AUTH_URL` は secret ではなく `wrangler.jsonc` の `vars` にあります。
-**デプロイ後の実際の URL に合わせてください。** ここが違うと OAuth の
-コールバックが成立しません。
+**デプロイ先の実際の URL と一致している必要があります。** ここが違うと
+OAuth のコールバックが成立しません。
+
+workers.dev のサブドメイン（`nabeliwo` の部分）は Worker ごとではなく
+**Cloudflare アカウント全体に1つ**です。変更するとアカウント上の
+すべての Worker の URL が変わります。
 
 ### 3. デプロイ
 
 ```bash
-pnpm deploy
+pnpm run deploy
 ```
+
+`pnpm deploy` は pnpm 自身のコマンドと衝突するため、`run` が必要です。
 
 ### 4. Google OAuth のリダイレクト URI を追加する
 
 Google Cloud Console の OAuth クライアントに、本番の URL を追加します。
 
 ```
-https://<デプロイ先のホスト>/api/auth/callback/google
+https://atlas.nabeliwo.workers.dev/api/auth/callback/google
+```
+
+実際の値は次で確認できます（`redirect_uri` を見る）。
+
+```bash
+curl -s -X POST https://atlas.nabeliwo.workers.dev/api/auth/sign-in/social \
+  -H 'Content-Type: application/json' \
+  -H 'Origin: https://atlas.nabeliwo.workers.dev' \
+  -d '{"provider":"google","callbackURL":"/admin"}'
 ```
 
 ローカル用の `http://localhost:3000/api/auth/callback/google` は
