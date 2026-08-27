@@ -151,6 +151,14 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 
 ## 未決事項 / ブロッカー
 
+- [ ] **検索に出てこない場所をどう記録するか**（保留中）
+      Google Places へ移行して取りこぼしは激減したが、ゼロにはならない。
+      対応案は「見つからなかったときだけ、名前を入力して地図上で位置を指定する」
+      導線を作ること（`provider='manual'`）。近接名寄せがそのまま効くので、
+      あとで同じ店が Google 側に載っても二重登録を検出できる。
+      ただし `docs/01-product-spec.md` の「Place 情報はユーザーが手編集しない」に
+      触れるため、実際に困る頻度が分かってから判断する、として保留にした（2026-08-28）。
+
 - [ ] 地図タイル provider の最終決定（暫定で OpenFreeMap positron を使用中。`docs/06-technical-design.md` が候補に挙げる MapTiler を採用する場合はライセンス確認が必要）
 - [x] 本番 D1 の作成と `wrangler.jsonc` の `database_id` 差し替え
 - [x] 本番 secrets の登録（`wrangler secret put`）
