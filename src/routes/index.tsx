@@ -257,12 +257,17 @@ function HomePage() {
 
       {/* 操作系は左に集約する。右は Place 詳細パネルが使う。 */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col items-start gap-2 p-4">
-        {/* 検索は外部施設検索を含むため、現時点では管理者にだけ見せる */}
-        {isAdmin ? (
-          <div className="pointer-events-auto">
-            <SearchBox onSelectCandidate={handleSelectCandidate} />
-          </div>
-        ) : null}
+        {/*
+          検索は誰でも使える。登録済みの Place を引く用途は公開機能で、
+          外部施設検索のセクションだけが管理者に出る。
+        */}
+        <div className="pointer-events-auto">
+          <SearchBox
+            isAdmin={isAdmin}
+            onSelectOwnPlace={(placeId) => selectPlace(placeId)}
+            onSelectCandidate={handleSelectCandidate}
+          />
+        </div>
         <div className="pointer-events-auto flex items-center gap-2.5">
           <DateRangeFilter value={range} onChange={changeRange} />
           {/*
@@ -322,7 +327,10 @@ function HomePage() {
               visitedDate: mode.visit.visitedDate,
               title: mode.visit.title ?? '',
               noteMarkdown: mode.visit.noteMarkdown ?? '',
-              links: [],
+              links: mode.visit.links.map((link) => ({
+                url: link.url,
+                title: link.title,
+              })),
             }}
             submitLabel="更新"
             submitting={submitting}
@@ -358,6 +366,7 @@ function HomePage() {
             setMode({ kind: 'edit', visit, placeName: detail.name })
           }}
           onDeleteVisit={handleDelete}
+          onRefresh={() => setDetailVersion((v) => v + 1)}
         />
       ) : null}
     </main>

@@ -2,9 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { Loader2, MapPin, Search, X } from 'lucide-react'
 
 import { searchExternalPlaces } from '@/server/visits'
+import { searchOwnPlaces, type OwnPlaceResult } from '@/server/places'
 import type { PlaceCandidate } from '@/server/place-search'
 
 type SearchBoxProps = {
+  /** 管理者だけが外部施設検索を使える。 */
+  isAdmin: boolean
+  /** 登録済みの Place を選んだとき。地図を寄せて詳細を開く。 */
+  onSelectOwnPlace: (placeId: string) => void
   /** 外部施設を選んだとき。Visit 追加フォームへ進む。 */
   onSelectCandidate: (candidate: PlaceCandidate) => void
 }
@@ -12,25 +17,54 @@ type SearchBoxProps = {
 /**
  * 検索欄。
  *
- * docs/04-ui-spec.md では「自分の Places」と「外部施設検索」の
- * 2セクションを1つのUIで扱う。ここではまず外部施設検索だけを実装し、
- * 自分の Place 検索は Phase 4 で同じ器に足す。
+ * 「自分の Places」と「外部施設検索」の2セクションを1つのUIで扱う
+ * （docs/04-ui-spec.md）。結果は視覚的に分離する。
  *
- * 外部検索は管理者だけが使うため、このコンポーネント自体を
- * 管理者以外にはレンダリングしない。
+ * 自分の Place 検索は誰でも使える。外部施設検索は新しい Visit を
+ * 追加するための導線なので、管理者のときだけ問い合わせる。
  */
-export function SearchBox({ onSelectCandidate }: SearchBoxProps) {
+export function SearchBox({
+  isAdmin,
+  onSelectOwnPlace,
+  onSelectCandidate,
+}: SearchBoxProps) {
   const [query, setQuery] = useState('')
+  const [own, setOwn] = useState<Array<OwnPlaceResult>>([])
   const [results, setResults] = useState<Array<PlaceCandidate>>([])
   const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
-  // 打鍵ごとに外部APIを叩かない（無料枠の消費を抑える）
+  // 自分のデータは自前のDBなので、1文字から即座に引く
   useEffect(() => {
     const trimmed = query.trim()
-    if (trimmed.length < 2) {
+    if (trimmed.length < 1) {
+      setOwn([])
+      return
+    }
+
+    let cancelled = false
+    const timer = setTimeout(() => {
+      void searchOwnPlaces({ data: { query: trimmed } })
+        .then((found) => {
+          if (!cancelled) setOwn(found)
+        })
+        .catch(() => {
+          if (!cancelled) setOwn([])
+        })
+    }, 150)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [query])
+
+  // 外部APIは打鍵ごとに叩かない（無料枠の消費を抑える）
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (!isAdmin || trimmed.length < 2) {
       setResults([])
       setFailed(false)
       return
@@ -58,7 +92,7 @@ export function SearchBox({ onSelectCandidate }: SearchBoxProps) {
       clearTimeout(timer)
       setLoading(false)
     }
-  }, [query])
+  }, [query, isAdmin])
 
   useEffect(() => {
     if (!open) return
@@ -76,7 +110,7 @@ export function SearchBox({ onSelectCandidate }: SearchBoxProps) {
     }
   }, [open])
 
-  const showResults = open && query.trim().length >= 2
+  const showResults = open && query.trim().length >= 1
 
   return (
     <div className="relative w-[min(320px,calc(100vw-2rem))]" ref={rootRef}>
@@ -105,8 +139,46 @@ export function SearchBox({ onSelectCandidate }: SearchBoxProps) {
       </div>
 
       {showResults ? (
-        <div className="absolute top-full left-0 z-20 mt-2 w-full overflow-hidden rounded-xl border border-border bg-background shadow-lg">
-          <p className="border-b border-border px-3 py-2 text-xs font-medium text-muted-foreground">
+        <div className="absolute top-full left-0 z-20 mt-2 max-h-[70dvh] w-full overflow-y-auto rounded-xl border border-border bg-background shadow-lg">
+          <p className="sticky top-0 border-b border-border bg-background px-3 py-2 text-xs font-medium text-muted-foreground">
+            登録した場所
+          </p>
+          {own.length === 0 ? (
+            <p className="px-3 py-3 text-sm text-muted-foreground">
+              一致する場所はありません。
+            </p>
+          ) : (
+            <ul>
+              {own.map((place) => (
+                <li key={place.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectOwnPlace(place.id)
+                      setOpen(false)
+                      setQuery('')
+                    }}
+                    className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-secondary"
+                  >
+                    <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">
+                        {place.name}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        訪問 {place.visitCount} 回
+                        {place.matchedIn === 'visit' ? '・記録が一致' : ''}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {!isAdmin ? null : (
+          <>
+          <p className="sticky top-0 border-y border-border bg-background px-3 py-2 text-xs font-medium text-muted-foreground">
             施設を検索
           </p>
 
@@ -155,6 +227,8 @@ export function SearchBox({ onSelectCandidate }: SearchBoxProps) {
                 </li>
               ))}
             </ul>
+          )}
+          </>
           )}
         </div>
       ) : null}

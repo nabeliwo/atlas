@@ -4,6 +4,8 @@ import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDateOnly } from '@/lib/format'
 import { Panel } from '@/components/panel/Panel'
+import { Markdown } from '@/components/markdown/Markdown'
+import { ExternalLinkCard } from '@/components/link/ExternalLinkCard'
 import type { PlaceDetail, PlaceDetailVisit } from '@/server/places'
 
 type PlacePanelProps = {
@@ -19,6 +21,8 @@ type PlacePanelProps = {
   onAddVisit: () => void
   onEditVisit: (visit: PlaceDetailVisit) => void
   onDeleteVisit: (visit: PlaceDetailVisit) => Promise<void>
+  /** OGP 再取得のあとに詳細を取り直す */
+  onRefresh: () => void
 }
 
 /**
@@ -35,6 +39,7 @@ export function PlacePanel({
   onAddVisit,
   onEditVisit,
   onDeleteVisit,
+  onRefresh,
 }: PlacePanelProps) {
   const visitRefs = useRef(new Map<string, HTMLLIElement>())
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
@@ -126,11 +131,24 @@ export function PlacePanel({
                 {visit.title ? (
                   <p className="mt-1 text-sm text-muted-foreground">{visit.title}</p>
                 ) : null}
-                {/* Markdown としての描画と外部リンクの OGP カードは Phase 4 */}
                 {visit.noteMarkdown ? (
-                  <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">
-                    {visit.noteMarkdown}
-                  </p>
+                  <div className="mt-2">
+                    <Markdown source={visit.noteMarkdown} />
+                  </div>
+                ) : null}
+
+                {visit.links.length > 0 ? (
+                  <ul className="mt-3 space-y-2">
+                    {visit.links.map((link) => (
+                      <li key={link.id}>
+                        <ExternalLinkCard
+                          link={link}
+                          isAdmin={isAdmin}
+                          onRefetched={onRefresh}
+                        />
+                      </li>
+                    ))}
+                  </ul>
                 ) : null}
 
                 {confirmingId === visit.id ? (

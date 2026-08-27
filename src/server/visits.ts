@@ -12,6 +12,7 @@ import {
 } from '@/lib/visit-input'
 import { requireAdmin } from './auth'
 import { getPlaceSearchProvider, type PlaceCandidate } from './place-search'
+import { fetchOgp } from './ogp/fetch-ogp'
 
 /**
  * write 系はすべてここに置く。
@@ -62,6 +63,30 @@ const CONFIRM_SAME_PLACE_RADIUS_METERS = 250
 
 /** 緯度1度 ≒ 111km。しきい値をカバーする程度に粗く箱で絞ってから距離を測る。 */
 const BBOX_DELTA_DEGREES = 0.004
+
+/**
+ * リンクの OGP をまとめて取得する。
+ *
+ * 取得の失敗は Visit の保存失敗にしない（docs/06-technical-design.md）。
+ * リンク自体は保存し、カードは fallback 表示になる。
+ * 1リンクずつ直列に待つと保存が遅くなるので並行に投げる。
+ */
+async function resolveOgp(links: Array<{ url: string; title: string }>) {
+  return Promise.all(
+    links.map(async (link) => {
+      const ogp = await fetchOgp(link.url).catch(() => null)
+      return {
+        ...link,
+        ogTitle: ogp?.title ?? null,
+        ogDescription: ogp?.description ?? null,
+        ogImageUrl: ogp?.imageUrl ?? null,
+        ogSiteName: ogp?.siteName ?? null,
+        // 取得を試みた事実を残す。null のままなら未試行と区別できる。
+        ogFetchedAt: ogp ? new Date().toISOString() : null,
+      }
+    }),
+  )
+}
 
 /**
  * providerPlaceId は違うが、実質同じ施設を指している既存 Place を探す。
@@ -186,13 +211,19 @@ export const createVisit = createServerFn({ method: 'POST' })
       }),
     )
 
-    for (const [index, link] of input.links.entries()) {
+    const resolved = await resolveOgp(input.links)
+    for (const [index, link] of resolved.entries()) {
       statements.push(
         db.insert(visitLinks).values({
           id: crypto.randomUUID(),
           visitId,
           url: link.url,
           title: link.title,
+          ogTitle: link.ogTitle,
+          ogDescription: link.ogDescription,
+          ogImageUrl: link.ogImageUrl,
+          ogSiteName: link.ogSiteName,
+          ogFetchedAt: link.ogFetchedAt,
           sortOrder: index,
           createdAt: now(),
           updatedAt: now(),
@@ -247,6 +278,19 @@ export const updateVisit = createServerFn({ method: 'POST' })
       }
     }
 
+    // URL が変わっていないリンクは OGP を取り直さない。
+    // 外部サイトへの不要なリクエストを減らすため。
+    const existingLinks = await db
+      .select()
+      .from(visitLinks)
+      .where(eq(visitLinks.visitId, data.visitId))
+    const ogpByUrl = new Map(existingLinks.map((link) => [link.url, link]))
+
+    const newUrls = input.links.filter((link) => !ogpByUrl.has(link.url))
+    const fetched = new Map(
+      (await resolveOgp(newUrls)).map((link) => [link.url, link]),
+    )
+
     const statements: Array<BatchItem<'sqlite'>> = [
       db
         .update(visits)
@@ -261,12 +305,18 @@ export const updateVisit = createServerFn({ method: 'POST' })
     ]
 
     for (const [index, link] of input.links.entries()) {
+      const ogp = ogpByUrl.get(link.url) ?? fetched.get(link.url)
       statements.push(
         db.insert(visitLinks).values({
           id: crypto.randomUUID(),
           visitId: data.visitId,
           url: link.url,
           title: link.title,
+          ogTitle: ogp?.ogTitle ?? null,
+          ogDescription: ogp?.ogDescription ?? null,
+          ogImageUrl: ogp?.ogImageUrl ?? null,
+          ogSiteName: ogp?.ogSiteName ?? null,
+          ogFetchedAt: ogp?.ogFetchedAt ?? null,
           sortOrder: index,
           createdAt: now(),
           updatedAt: now(),
@@ -375,6 +425,39 @@ export const findSimilarPlaces = createServerFn({ method: 'GET' })
         visitCount: stats?.count ?? 0,
       },
     ]
+  })
+
+/**
+ * OGP の手動再取得（管理者のみ）。
+ * リンク先のページが更新された場合や、登録時に取得できなかった場合に使う。
+ */
+export const refetchOgp = createServerFn({ method: 'POST' })
+  .validator((input: { linkId: string }) => input)
+  .handler(async ({ data }): Promise<{ ok: boolean }> => {
+    await requireAdmin()
+
+    const db = getDb()
+    const link = await db.query.visitLinks.findFirst({
+      where: eq(visitLinks.id, data.linkId),
+    })
+    if (!link) return { ok: false }
+
+    const ogp = await fetchOgp(link.url)
+    if (!ogp) return { ok: false }
+
+    await db
+      .update(visitLinks)
+      .set({
+        ogTitle: ogp.title ?? null,
+        ogDescription: ogp.description ?? null,
+        ogImageUrl: ogp.imageUrl ?? null,
+        ogSiteName: ogp.siteName ?? null,
+        ogFetchedAt: new Date().toISOString(),
+        updatedAt: now(),
+      })
+      .where(eq(visitLinks.id, data.linkId))
+
+    return { ok: true }
   })
 
 /** 外部施設検索。API キーは server 側に閉じ、クライアントへ渡さない。 */

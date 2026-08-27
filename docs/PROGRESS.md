@@ -20,7 +20,7 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 ## 現在地
 
 - **現在フェーズ**: Phase 4 — リンク・メモ・検索
-- **状態**: Phase 3 完了（Google ログインまでブラウザで確認済み） / Phase 4 未着手
+- **状態**: Phase 4 実装完了（ブラウザでの動作確認待ち）
 - **最終更新**: 2026-08-27
 
 `pnpm db:reset && pnpm dev` でローカル環境が立ち上がる（詳細は README「開発」）。
@@ -83,18 +83,18 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 
 ## Phase 4: リンク・メモ・検索
 
-- [ ] 外部リンク複数（URL + ユーザー指定タイトル + sortOrder）
-- [ ] メモ or 外部リンク必須バリデーション（アプリ層で保証）
-- [ ] OGP登録時取得（server-side, SSRF対策込み）
-- [ ] OGP を D1 にキャッシュ
-- [ ] OGPカード表示
-- [ ] OGP失敗時リンクfallback
-- [ ] OGP手動再取得（管理者のみ）
-- [ ] 外部リンクは別タブ
-- [ ] Markdownメモ表示（sanitize必須）
-- [ ] 自分のPlace検索（places.name）
-- [ ] Visitタイトル/メモ検索（visits.title / noteMarkdown）
-- [ ] 検索結果選択で地図ジャンプ（flyTo）＋詳細パネル
+- [x] 外部リンク複数（URL + ユーザー指定タイトル + sortOrder）
+- [x] メモ or 外部リンク必須バリデーション（アプリ層で保証）
+- [x] OGP登録時取得（server-side, SSRF対策込み）
+- [x] OGP を D1 にキャッシュ
+- [x] OGPカード表示
+- [x] OGP失敗時リンクfallback
+- [x] OGP手動再取得（管理者のみ）
+- [x] 外部リンクは別タブ
+- [x] Markdownメモ表示（sanitize必須）
+- [x] 自分のPlace検索（places.name）
+- [x] Visitタイトル/メモ検索（visits.title / noteMarkdown）
+- [x] 検索結果選択で地図ジャンプ（flyTo）＋詳細パネル
 
 ## Phase 5: 仕上げ
 
@@ -125,6 +125,10 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 | 2026-08-27 | Place 詳細にも期間フィルターを適用する | 期間は「地図上の集計全体」に効くという仕様に合わせた。全期間との差が出る場合はパネルに全期間の回数を併記する |
 | 2026-08-27 | 地図の移動は検索/URL 由来の選択時のみ | ピンをクリックした場合はすでに見えている位置なので動かさない。パネルに隠れないよう flyTo に offset を渡す |
 | 2026-08-27 | 地図上のUIは「左=操作 / 右=詳細」に分ける | Place 詳細パネルを右、期間フィルターとズームボタンを左に配置。Phase 4 の検索欄と Phase 5 のプロフィールは左側に置く前提で場所を空けてある |
+| 2026-08-27 | Markdown は HTML 文字列を作らず React 要素へ変換する | `dangerouslySetInnerHTML` を使わなければ sanitize 漏れによる XSS が構造的に起こらない。DOMPurify は jsdom を引き込み Workers に重すぎる |
+| 2026-08-27 | OGP はリダイレクトを自動追尾せず1ホップずつ再検証する | 外部URLから内部アドレスへ飛ばす経路を塞ぐため |
+| 2026-08-27 | OGP の HTML は正規表現で meta だけ拾う | Workers Free の 10ms CPU 制約。`</head>` を見つけた時点で読み込みを打ち切る |
+| 2026-08-27 | テストは vitest.config.ts を別に持つ | `vite.config.ts` は Cloudflare プラグインを含み、Workers 環境の制約がテストと競合する |
 | 2026-08-27 | 認証は Better Auth + Google OAuth、認可は別建て | ログインできること自体は権限を意味しない。`ADMIN_GOOGLE_EMAIL` と大文字小文字だけ吸収した完全一致で判定する |
 | 2026-08-27 | `auth-schema.ts` は Better Auth CLI で生成する | 列名・型が Better Auth の期待とズレると実行時まで気づけない。手書きしない |
 | 2026-08-27 | drizzle-orm を 0.45.2 へ更新 | Better Auth の drizzle adapter が `>=0.45.2` を要求するため |
@@ -152,6 +156,25 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 ## 作業ログ
 
 新しいものを上に追記する。
+
+### 2026-08-27 — Phase 4 実装完了（動作確認待ち）
+- OGP 取得と SSRF 対策（`src/server/ogp/`）。vitest を導入し 20 テスト
+- OGP を保存時に取得して D1 にキャッシュ。編集時は URL が変わっていない
+  リンクの OGP を取り直さない
+- OGP 手動再取得（管理者のみ、カード右上のボタン）
+- Markdown 描画（`src/components/markdown/`）。XSS のテスト 9 件
+- `getPlaceDetail` が visit_links を返すようになり、
+  「編集フォームでリンクが消える」積み残しを解消
+- 自分の Place 検索（Place名 / Visitタイトル / メモ本文）。
+  検索欄が一般閲覧者にも見えるようになった
+
+**確認したこと**
+- テスト 29 件が通る（SSRF、リダイレクト、XSS を含む）
+- 検索SQLが Place名・Visitタイトル・メモ本文にヒットする
+- 未ログインでも検索欄が出て、`isAdmin` は false のまま
+
+**未確認**
+- ブラウザでの OGP カードの見た目、Markdown の描画
 
 ### 2026-08-27 — Phase 3 完了
 - `PlaceSearchProvider` 抽象化 + Geoapify provider（実 API と突合済み）+ 開発用ダミー
