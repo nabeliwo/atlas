@@ -33,7 +33,7 @@ Cloudflare bindingsはserver-side codeから `cloudflare:workers` の `env` 経�
 初期セットアップ候補:
 
 ```bash
-npm create cloudflare@latest -- life-map --framework=tanstack-start
+npm create cloudflare@latest -- atlas --framework=tanstack-start
 ```
 
 Ref:

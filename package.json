@@ -1,5 +1,5 @@
 {
-  "name": "life-map",
+  "name": "atlas",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,9 +11,9 @@
     "cf-typegen": "wrangler types",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "wrangler d1 migrations apply life-map-db --local",
-    "db:migrate:remote": "wrangler d1 migrations apply life-map-db --remote",
-    "db:seed": "wrangler d1 execute life-map-db --local --file=./db/seed.sql",
+    "db:migrate": "wrangler d1 migrations apply atlas-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply atlas-db --remote",
+    "db:seed": "wrangler d1 execute atlas-db --local --file=./db/seed.sql",
     "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate && npm run db:seed"
   },
   "dependencies": {

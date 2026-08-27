@@ -3,7 +3,7 @@
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "life-map",
+  "name": "atlas",
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/react-start/server-entry",
@@ -15,8 +15,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "life-map-db",
-      // ローカル開発では未使用。デプロイ前に `wrangler d1 create life-map-db` で得た
+      "database_name": "atlas-db",
+      // ローカル開発では未使用。デプロイ前に `wrangler d1 create atlas-db` で得た
       // 実IDへ差し替える（docs/PROGRESS.md の「未決事項」参照）。
       "database_id": "local-placeholder-id",
       "migrations_dir": "db/migrations"

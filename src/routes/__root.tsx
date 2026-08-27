@@ -14,7 +14,7 @@ export const Route = createRootRoute({
         content:
           'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover',
       },
-      { title: 'Life Map' },
+      { title: 'Atlas' },
       {
         name: 'description',
         content: '人生で記憶に残した場所を、地図という形でコレクションする。',

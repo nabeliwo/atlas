@@ -1,6 +1,6 @@
 # Progress
 
-Life Map の実装進捗を記録する唯一のドキュメント。
+Atlas の実装進捗を記録する唯一のドキュメント。
 別セッション（Claude Code / Codex / 人間）から作業を再開するときは、まずこのファイルを読む。
 
 ## 使い方
@@ -141,7 +141,7 @@ Life Map の実装進捗を記録する唯一のドキュメント。
 - create-cloudflare で TanStack Start + Workers を雛形生成し、デモ用の Header/Footer/ThemeToggle/about とダークテーマを削除
 - Tailwind v4 + shadcn/ui（new-york / neutral / 単一ライトテーマ）をセットアップ
 - Drizzle schema を `src/db/schema.ts` に定義し、`db/migrations/0000_init.sql` を生成・ローカル適用
-- `db/seed.sql` を作成（10 places / 18 visits / 7 links、2018〜2026・国内外に分散）
+- `db/seed.sql` を作成（10 places / 17 visits / 7 links、2018〜2026・国内外に分散）
 - `/` に MapLibre の世界地図を表示（`src/components/map/MapView.tsx`、SSR回避のため dynamic import）
 - `pnpm typecheck` / `pnpm build` / `pnpm dev` の通過を確認
 
