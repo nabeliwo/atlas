@@ -10,12 +10,17 @@ import type {
  * 施設名で引きたいので Places API ではなく autocomplete を使う。
  * Places API はカテゴリと範囲で引く API で、テキスト検索には向かない。
  *
- * !!! 未検証 !!!
- * このファイルは API キーが無い状態で書いたため、実レスポンスとの
- * 突き合わせができていない。キーを入手したら以下を必ず確認すること。
- *   - features[].properties のフィールド名（place_id / formatted / lat / lon など）
- *   - place-details での取得が place_id で引けるか
- * 想定と違う場合はこのファイルだけを直せばよい（境界は types.ts で閉じている）。
+ * 実 API との突き合わせ済み（2026-08-27）。確認した挙動:
+ *
+ * - autocomplete の place_id は、同一クエリを繰り返しても同じ値が返る。
+ *   ただし Geoapify 側のデータ更新をまたいだ安定性までは確認できていない。
+ * - place-details は施設としては正しいもの（名前・座標が一致）を返すが、
+ *   レスポンス中の place_id は要求した値と異なる。
+ *   そのため getById では要求された ID を保持し、応答側の place_id を採用しない。
+ *   採用すると、同じ施設の providerPlaceId が呼ぶたびに変わってしまう。
+ * - autocomplete は datasource.raw を返さないため、osm_id による
+ *   同一性判定は使えない（place-details だけが raw を持つ）。
+ * - 日本の住所では state が null になることがあるので、region は欠けうる。
  */
 export class GeoapifyPlaceSearchProvider implements PlaceSearchProvider {
   readonly name = 'geoapify'
@@ -50,7 +55,7 @@ export class GeoapifyPlaceSearchProvider implements PlaceSearchProvider {
 
     const body = (await response.json()) as GeoapifyResponse
     return (body.features ?? [])
-      .map(toCandidate)
+      .map((feature) => toCandidate(feature))
       .filter((c): c is PlaceCandidate => c !== null)
   }
 
@@ -65,7 +70,13 @@ export class GeoapifyPlaceSearchProvider implements PlaceSearchProvider {
 
     const body = (await response.json()) as GeoapifyResponse
     const first = body.features?.[0]
-    return first ? toCandidate(first) : null
+    if (!first) return null
+
+    const candidate = toCandidate(first, providerPlaceId)
+    if (!candidate) return null
+
+    // 応答の place_id は要求した値と一致しないため、要求側の ID を正とする
+    return { ...candidate, providerPlaceId }
   }
 }
 
@@ -80,6 +91,7 @@ type GeoapifyFeature = {
     country_code?: string
     state?: string
     county?: string
+    suburb?: string
     city?: string
     categories?: Array<string>
     category?: string
@@ -95,9 +107,13 @@ type GeoapifyResponse = {
  * 欠けているフィールドがあっても落ちないようにし、
  * 座標と ID という必須要素が無いものだけを捨てる。
  */
-function toCandidate(feature: GeoapifyFeature): PlaceCandidate | null {
+function toCandidate(
+  feature: GeoapifyFeature,
+  fallbackPlaceId?: string,
+): PlaceCandidate | null {
   const p = feature.properties
-  if (!p?.place_id) return null
+  const providerPlaceId = p?.place_id ?? fallbackPlaceId
+  if (!p || !providerPlaceId) return null
   if (typeof p.lat !== 'number' || typeof p.lon !== 'number') return null
 
   // 施設名が無い（住所だけの）結果は、表示名として formatted を使う
@@ -106,13 +122,13 @@ function toCandidate(feature: GeoapifyFeature): PlaceCandidate | null {
 
   return {
     provider: 'geoapify',
-    providerPlaceId: p.place_id,
+    providerPlaceId,
     name,
     latitude: p.lat,
     longitude: p.lon,
     address: p.formatted,
     countryCode: p.country_code?.toUpperCase(),
-    region: p.state ?? p.county,
+    region: p.state ?? p.county ?? p.suburb,
     city: p.city,
     category: p.categories?.[0] ?? p.category,
   }

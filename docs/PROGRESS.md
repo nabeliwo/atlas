@@ -125,6 +125,8 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 | 2026-08-27 | Place 詳細にも期間フィルターを適用する | 期間は「地図上の集計全体」に効くという仕様に合わせた。全期間との差が出る場合はパネルに全期間の回数を併記する |
 | 2026-08-27 | 地図の移動は検索/URL 由来の選択時のみ | ピンをクリックした場合はすでに見えている位置なので動かさない。パネルに隠れないよう flyTo に offset を渡す |
 | 2026-08-27 | 地図上のUIは「左=操作 / 右=詳細」に分ける | Place 詳細パネルを右、期間フィルターとズームボタンを左に配置。Phase 4 の検索欄と Phase 5 のプロフィールは左側に置く前提で場所を空けてある |
+| 2026-08-27 | Geoapify は Geocoding Autocomplete を使う | 施設名で引きたいため。Places API はカテゴリと範囲で引く API でテキスト検索に向かない |
+| 2026-08-27 | `getById` は要求した providerPlaceId を保持する | place-details は施設としては正しいものを返すが、応答中の place_id は要求値と異なる。応答側を採用すると同じ施設の ID が呼ぶたびに変わる |
 | 2026-08-27 | Place 詳細はクライアント側で取得 | 期間が変わったときだけ loader を再実行させるため（`loaderDeps` は from/to のみ）。`?place=` 直接アクセスでは1往復ぶん遅れて開く |
 
 ---
@@ -132,9 +134,14 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 ## 未決事項 / ブロッカー
 
 - [ ] 地図タイル provider の最終決定（暫定で OpenFreeMap positron を使用中。`docs/06-technical-design.md` が候補に挙げる MapTiler を採用する場合はライセンス確認が必要）
-- [ ] 施設検索 provider の API キー取得（Geoapify 候補）
-- [ ] Google OAuth クライアント（client id / secret）の用意
-- [ ] `ADMIN_GOOGLE_EMAIL` に入れるアドレスの確定
+- [x] 施設検索 provider の API キー取得（Geoapify）— 2026-08-27 完了、実 API で疎通確認済み
+- [x] Google OAuth クライアント（client id / secret）の用意 — 2026-08-27 完了
+- [x] `ADMIN_GOOGLE_EMAIL` に入れるアドレスの確定 — 2026-08-27 完了
+- [ ] **同一施設が Geoapify から複数件返る問題**。「清澄庭園」で検索すると
+      leisure.park / commercial.tickets / rental.bicycle の3件が同名で返る。
+      別々に選ぶと同じ施設に対して別 Place ができてしまい、
+      「同一施設は同一Place」（docs/02-concepts.md）が破れる。UIでの見せ方か
+      保存時の名寄せで対処が必要
 
 ---
 
