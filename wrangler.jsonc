@@ -1,0 +1,34 @@
+/**
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "life-map",
+  "compatibility_date": "2025-09-02",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/react-start/server-entry",
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true,
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "life-map-db",
+      // ローカル開発では未使用。デプロイ前に `wrangler d1 create life-map-db` で得た
+      // 実IDへ差し替える（docs/PROGRESS.md の「未決事項」参照）。
+      "database_id": "local-placeholder-id",
+      "migrations_dir": "db/migrations"
+    }
+  ]
+
+  /**
+   * Secrets（wrangler secret put で登録し、リポジトリには置かない）
+   * - GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
+   * - BETTER_AUTH_SECRET
+   * - ADMIN_GOOGLE_EMAIL
+   * - PLACE_SEARCH_API_KEY
+   * - MAP_TILE_API_KEY
+   */
+}
