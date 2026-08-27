@@ -73,6 +73,9 @@ function HomePage() {
   const range: DateRange = { from: search.from, to: search.to }
   const filtered = !isEmptyRange(range)
 
+  // loader が返した集合から数えるだけなので、クエリは増やさない
+  const visitTotal = places.reduce((sum, place) => sum + place.visitCount, 0)
+
   const [detail, setDetail] = useState<PlaceDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [mode, setMode] = useState<PanelMode>({ kind: 'none' })
@@ -245,8 +248,19 @@ function HomePage() {
             <SearchBox onSelectCandidate={handleSelectCandidate} />
           </div>
         ) : null}
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto flex items-center gap-2.5">
           <DateRangeFilter value={range} onChange={changeRange} />
+          {/*
+            期間で絞ったときだけ件数を出す。全期間では地図そのものが
+            答えなので、常時出すとクロームが増えるだけになる。
+          */}
+          {filtered ? (
+            <p className="rounded-full bg-background/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
+              {places.length === 0
+                ? 'この期間の訪問はありません'
+                : `${places.length}か所・${visitTotal}回の訪問`}
+            </p>
+          ) : null}
         </div>
       </div>
 
