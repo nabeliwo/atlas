@@ -23,7 +23,47 @@ export const Route = createRootRoute({
     links: [{ rel: 'stylesheet', href: appCss }],
   }),
   shellComponent: RootDocument,
+  // 既定の <p>Not Found</p> や生のエラーをそのまま出さない
+  notFoundComponent: () => (
+    <Fallback
+      title="ページが見つかりません"
+      description="URL が正しいか確認してください。"
+    />
+  ),
+  errorComponent: ({ error }) => (
+    <Fallback
+      title="問題が発生しました"
+      description={
+        import.meta.env.DEV && error instanceof Error
+          ? error.message
+          : '時間をおいて、もう一度お試しください。'
+      }
+    />
+  ),
 })
+
+function Fallback({
+  title,
+  description,
+}: {
+  title: string
+  description: string
+}) {
+  return (
+    <main className="flex h-dvh items-center justify-center p-6">
+      <div className="max-w-sm text-center">
+        <h1 className="text-lg font-semibold">{title}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+        <a
+          href="/"
+          className="mt-5 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+        >
+          地図へ戻る
+        </a>
+      </div>
+    </main>
+  )
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (

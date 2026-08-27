@@ -11,6 +11,8 @@ import type { PlaceDetail, PlaceDetailVisit } from '@/server/places'
 type PlacePanelProps = {
   detail: PlaceDetail | null
   loading: boolean
+  /** 取得そのものが失敗した。「見つからない」とは区別して伝える。 */
+  failed: boolean
   /** 期間フィルターが効いているか。統計が全期間でないことを伝えるために使う。 */
   filtered: boolean
   /** `?visit=` で指定された Visit。見える位置までスクロールし、一時的に強調する。 */
@@ -32,6 +34,7 @@ type PlacePanelProps = {
 export function PlacePanel({
   detail,
   loading,
+  failed,
   filtered,
   highlightVisitId,
   isAdmin,
@@ -56,6 +59,10 @@ export function PlacePanel({
     <Panel onClose={onClose}>
       {loading && !detail ? (
         <PanelSkeleton />
+      ) : failed ? (
+        <p className="pt-8 text-center text-sm text-muted-foreground">
+          読み込みに失敗しました。時間をおいて、もう一度お試しください。
+        </p>
       ) : !detail ? (
         <p className="pt-8 text-center text-sm text-muted-foreground">
           この場所は見つかりませんでした。

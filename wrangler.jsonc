@@ -16,12 +16,20 @@
     {
       "binding": "DB",
       "database_name": "atlas-db",
-      // ローカル開発では未使用。デプロイ前に `wrangler d1 create atlas-db` で得た
-      // 実IDへ差し替える（docs/PROGRESS.md の「未決事項」参照）。
+      // ローカル開発では使われない。デプロイ前に
+      //   npx wrangler d1 create atlas-db
+      // で得た実IDへ差し替える（手順は README「デプロイ」）。
       "database_id": "local-placeholder-id",
       "migrations_dir": "db/migrations"
     }
-  ]
+  ],
+
+  // 本番の BETTER_AUTH_URL。デプロイ後の workers.dev のURLに合わせる。
+  // 独自ドメインを使う場合はそのURLにする。
+  // これが実際のURLと違うと OAuth のコールバックが成立しない。
+  "vars": {
+    "BETTER_AUTH_URL": "https://atlas.workers.dev"
+  }
 
   /**
    * Secrets（wrangler secret put で登録し、リポジトリには置かない）

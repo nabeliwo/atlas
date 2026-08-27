@@ -144,6 +144,11 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 ## 未決事項 / ブロッカー
 
 - [ ] 地図タイル provider の最終決定（暫定で OpenFreeMap positron を使用中。`docs/06-technical-design.md` が候補に挙げる MapTiler を採用する場合はライセンス確認が必要）
+- [ ] 本番 D1 の作成と `wrangler.jsonc` の `database_id` 差し替え
+- [ ] 本番 secrets の登録（`wrangler secret put`）
+- [ ] `wrangler.jsonc` の `vars.BETTER_AUTH_URL` を実際のデプロイ先URLに合わせる
+- [ ] Google OAuth クライアントに本番のリダイレクトURIを追加
+- [ ] 独自ドメインは使わない方針（workers.dev のまま）
 - [x] 施設検索 provider の API キー取得（Geoapify）— 2026-08-27 完了、実 API で疎通確認済み
 - [x] Google OAuth クライアント（client id / secret）の用意 — 2026-08-27 完了
 - [x] `ADMIN_GOOGLE_EMAIL` に入れるアドレスの確定 — 2026-08-27 完了

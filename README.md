@@ -47,6 +47,67 @@ pnpm dev                  # http://localhost:3000
 | `pnpm cf-typegen` | `wrangler.jsonc` から Env の型を再生成 |
 
 
+## デプロイ
+
+Cloudflare Workers + D1。初回だけ次の準備が要ります。
+
+### 1. 本番の D1 を作る
+
+```bash
+npx wrangler login
+npx wrangler d1 create atlas-db
+```
+
+出力された `database_id` を `wrangler.jsonc` の
+`d1_databases[0].database_id` に貼り替えます（初期値は
+`local-placeholder-id` というプレースホルダです）。
+
+```bash
+pnpm db:migrate:remote     # 本番 D1 にマイグレーション適用
+```
+
+seed は開発用の fixtures なので本番には投入しません。
+
+### 2. secrets を登録する
+
+`.dev.vars` はローカル専用です。本番へは個別に登録します。
+
+```bash
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+npx wrangler secret put BETTER_AUTH_SECRET
+npx wrangler secret put ADMIN_GOOGLE_EMAIL
+npx wrangler secret put PLACE_SEARCH_API_KEY
+```
+
+`BETTER_AUTH_URL` は secret ではなく `wrangler.jsonc` の `vars` にあります。
+**デプロイ後の実際の URL に合わせてください。** ここが違うと OAuth の
+コールバックが成立しません。
+
+### 3. デプロイ
+
+```bash
+pnpm deploy
+```
+
+### 4. Google OAuth のリダイレクト URI を追加する
+
+Google Cloud Console の OAuth クライアントに、本番の URL を追加します。
+
+```
+https://<デプロイ先のホスト>/api/auth/callback/google
+```
+
+ローカル用の `http://localhost:3000/api/auth/callback/google` は
+残したままで構いません。
+
+### デプロイ後の確認
+
+- `/` に地図が出る（データが無ければ空の世界地図）
+- `/api/auth/ok` が `{"ok":true}` を返す
+- `/admin` から Google ログインできる
+- ログイン後に地図で訪問を追加できる
+
 ## 実装方針
 
 - 要件にない機能を勝手に追加しない

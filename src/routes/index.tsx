@@ -85,6 +85,7 @@ function HomePage() {
 
   const [detail, setDetail] = useState<PlaceDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [detailFailed, setDetailFailed] = useState(false)
   const [mode, setMode] = useState<PanelMode>({ kind: 'none' })
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -121,10 +122,14 @@ function HomePage() {
 
     let cancelled = false
     setDetailLoading(true)
+    setDetailFailed(false)
 
     void getPlaceDetail({ data: { placeId, from: search.from, to: search.to } })
       .then((result) => {
         if (!cancelled) setDetail(result)
+      })
+      .catch(() => {
+        if (!cancelled) setDetailFailed(true)
       })
       .finally(() => {
         if (!cancelled) setDetailLoading(false)
@@ -143,15 +148,24 @@ function HomePage() {
 
   /** 検索で外部施設を選んだとき。同名近接があれば確認を挟む。 */
   const handleSelectCandidate = useCallback(async (candidate: PlaceCandidate) => {
-    const similar = await findSimilarPlaces({ data: { candidate } })
-    const first = similar[0]
+    setFormError(null)
+    setFormNotice(null)
+    setSearchError(null)
 
+    let similar: Array<SimilarPlace> = []
+    try {
+      similar = await findSimilarPlaces({ data: { candidate } })
+    } catch {
+      // 確認できなくても追加自体は続けられるようにする
+      setSearchError('登録済みの場所との照合に失敗しました。')
+    }
+
+    const first = similar[0]
     if (first) {
       setMode({ kind: 'confirm-similar', candidate, similar: first })
       return
     }
-    setFormError(null)
-    setFormNotice(null)
+
     setMode({
       kind: 'create',
       candidate,
@@ -254,6 +268,9 @@ function HomePage() {
     [refresh, selectPlace],
   )
 
+  /** 検索から外部施設を選ぶ処理は外部APIに依存するので、失敗を握りつぶさない */
+  const [searchError, setSearchError] = useState<string | null>(null)
+
   return (
     <main className="relative h-dvh w-full overflow-hidden">
       <MapView
@@ -289,6 +306,19 @@ function HomePage() {
             </p>
           ) : null}
         </div>
+
+        {/*
+          まだ1件も無いとき、地図に何も出ないままだと状態が伝わらない。
+          期間で0件になった場合はフィルターの件数表示が理由を示すので、
+          ここでは全期間で空のときだけ出す。
+        */}
+        {!filtered && places.length === 0 ? (
+          <p className="pointer-events-auto rounded-lg border border-border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm">
+            {isAdmin
+              ? '訪れた場所を検索して、最初の記録を追加してみてください。'
+              : 'まだ記録された場所がありません。'}
+          </p>
+        ) : null}
 
         {/* 作者情報。地図の邪魔にならないよう、操作系の下に小さく置く。 */}
         {profile ? (
@@ -327,7 +357,7 @@ function HomePage() {
             placeAddress={mode.placeAddress}
             submitLabel="保存"
             submitting={submitting}
-            serverError={formError}
+            serverError={formError ?? searchError}
             notice={formNotice}
             onSubmit={handleCreate}
             onCancel={() => setMode({ kind: 'none' })}
@@ -358,6 +388,7 @@ function HomePage() {
         <PlacePanel
           detail={detail}
           loading={detailLoading}
+          failed={detailFailed}
           filtered={filtered}
           highlightVisitId={search.visit}
           isAdmin={isAdmin}
