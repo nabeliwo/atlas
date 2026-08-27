@@ -14,6 +14,12 @@
 8. 外部provider（施設検索・地図タイル）は差し替え可能にする。
 9. write操作はすべてserver-sideでadmin authorizationする。
 10. OGP fetchにはSSRF対策を入れる。
+11. **このリポジトリは public**。secret・APIキー・管理者のメールアドレスを
+    リポジトリ内のいかなるファイルにも書かない（`.dev.vars.example` などの
+    サンプルファイルも含む）。値は `wrangler secret put` と、gitignore 済みの
+    `.dev.vars` にだけ置く。
+12. クライアントへ渡る値は、リポジトリの公開/非公開に関わらず公開情報になる。
+    施設検索APIはserver function経由で叩き、キーをブラウザへ出さない。
 
 ## 推奨実装順
 

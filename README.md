@@ -17,6 +17,11 @@
 実装の進捗は `docs/PROGRESS.md` に記録しています。
 作業を始める前にそこを読み、作業が終わったら必ず更新してください。
 
+> [!IMPORTANT]
+> **このリポジトリは public です。**
+> secret・APIキー・管理者のメールアドレスをコミットしないでください。
+> 値は `wrangler secret put` と、gitignore 済みの `.dev.vars` にだけ置きます。
+
 ## 開発
 
 ```bash
