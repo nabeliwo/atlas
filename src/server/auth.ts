@@ -13,6 +13,10 @@ import { env } from 'cloudflare:workers'
  *
  * bypass は import.meta.env.DEV で囲ってあるので、本番ビルドでは
  * 条件が静的に false になり、コードごと落ちる。
+ *
+ * このモジュールは cloudflare:workers に依存するため、
+ * クライアントから import してはいけない。
+ * UI の出し分けに使う管理者フラグは server/admin.ts 経由で取得する。
  */
 
 export type AdminSession = {
