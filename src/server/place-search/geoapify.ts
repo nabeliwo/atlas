@@ -21,6 +21,10 @@ import type {
  * - autocomplete は datasource.raw を返さないため、osm_id による
  *   同一性判定は使えない（place-details だけが raw を持つ）。
  * - 日本の住所では state が null になることがあるので、region は欠けうる。
+ * - autocomplete は「検索語に一致した名前」を返す。`lang=ja` はこれを
+ *   上書きしない。例えば「渋谷PARCO」で引くと Latin 側にマッチして
+ *   'Shibuya Parco' が返る（OSM の primary name は「渋谷パルコ」なのに）。
+ *   place-details は正規の名前を返すため、保存時に getById で取り直す。
  */
 export class GeoapifyPlaceSearchProvider implements PlaceSearchProvider {
   readonly name = 'geoapify'
@@ -75,13 +79,21 @@ export class GeoapifyPlaceSearchProvider implements PlaceSearchProvider {
     const candidate = toCandidate(first, providerPlaceId)
     if (!candidate) return null
 
+    // OSM に日本語名があればそれを優先する。UI 全体が日本語のため。
+    const localized = first.properties?.datasource?.raw?.['name:ja']
+    const name = typeof localized === 'string' && localized ? localized : candidate.name
+
     // 応答の place_id は要求した値と一致しないため、要求側の ID を正とする
-    return { ...candidate, providerPlaceId }
+    return { ...candidate, name, providerPlaceId }
   }
 }
 
 type GeoapifyFeature = {
   properties?: {
+    datasource?: {
+      /** place-details のみが返す OSM の生タグ */
+      raw?: Record<string, unknown>
+    }
     place_id?: string
     name?: string
     formatted?: string

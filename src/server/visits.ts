@@ -161,20 +161,35 @@ export const createVisit = createServerFn({ method: 'POST' })
       if (sameFacility) {
         placeId = sameFacility.id
       } else {
+        /*
+         * 保存する直前に provider から取り直す。
+         *
+         * 検索は「検索語に一致した名前」を返すため、例えば「渋谷PARCO」で
+         * 引くと 'Shibuya Parco' になる。詳細取得は正規の名前
+         * （渋谷パルコ）を返すので、地図に残る名前が安定する。
+         *
+         * クライアントから渡された候補をそのまま信用せずに済む、という
+         * 副次的な効果もある。取得に失敗したら候補をそのまま使う。
+         */
+        const snapshot =
+          (await getPlaceSearchProvider()
+            .getById(candidate.providerPlaceId)
+            .catch(() => null)) ?? candidate
+
         placeId = crypto.randomUUID()
         statements.push(
           db.insert(places).values({
             id: placeId,
             provider: candidate.provider,
             providerPlaceId: candidate.providerPlaceId,
-            name: candidate.name,
-            latitude: candidate.latitude,
-            longitude: candidate.longitude,
-            address: candidate.address,
-            countryCode: candidate.countryCode,
-            region: candidate.region,
-            city: candidate.city,
-            category: candidate.category,
+            name: snapshot.name,
+            latitude: snapshot.latitude,
+            longitude: snapshot.longitude,
+            address: snapshot.address,
+            countryCode: snapshot.countryCode,
+            region: snapshot.region,
+            city: snapshot.city,
+            category: snapshot.category,
             createdAt: now(),
             updatedAt: now(),
           }),
