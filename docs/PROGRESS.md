@@ -19,8 +19,8 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 
 ## 現在地
 
-- **現在フェーズ**: Phase 3 — 管理者と書き込み
-- **状態**: Phase 3 実装完了（Google ログインの実地確認待ち）
+- **現在フェーズ**: Phase 4 — リンク・メモ・検索
+- **状態**: Phase 3 完了（Google ログインまでブラウザで確認済み） / Phase 4 未着手
 - **最終更新**: 2026-08-27
 
 `pnpm db:reset && pnpm dev` でローカル環境が立ち上がる（詳細は README「開発」）。
@@ -153,7 +153,7 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 
 新しいものを上に追記する。
 
-### 2026-08-27 — Phase 3 実装完了（Google ログインの実地確認待ち）
+### 2026-08-27 — Phase 3 完了
 - `PlaceSearchProvider` 抽象化 + Geoapify provider（実 API と突合済み）+ 開発用ダミー
 - `requireAdmin()` を全 write の先頭に置く構造
 - D1 に対話的トランザクションが無いため、原子性は `db.batch()` で担保
@@ -168,11 +168,22 @@ Atlas の実装進捗を記録する唯一のドキュメント。
   （redirect_uri = `http://localhost:3000/api/auth/callback/google`）
 - 未ログインでは地図に検索欄も編集導線も出ず、`isAdmin` が false
 
-**未確認**
-- ブラウザで実際に Google ログインを通すところ（要ユーザー操作）
+**ブラウザで確認済み**
+- Google ログイン、管理者判定、管理UIの出し分け、Visit の追加/編集/削除
+
+**詰まった点**
+- ログインのコールバックが internal_server_error になった。原因は
+  `@better-auth/cli` が deprecated で 1.5 系までしか無く、better-auth 1.7 が
+  要求する `account.issuer` を生成しないこと。CLI の出力を検証せず使ったのが誤り。
+  `better-auth/db` の `getAuthTables()` と突き合わせて解決した（手順は
+  `src/db/auth-schema.ts` の冒頭に記載）。
 
 **注意**
 - `pnpm db:reset` は認証テーブルも消えるため、実行後は再ログインが必要
+
+**Phase 4 へ持ち越し**
+- 編集フォームの外部リンクが空で開く。`getPlaceDetail` がまだ
+  visit_links を返していないため。この状態で更新するとリンクが消える。
 
 ### 2026-08-27 — Phase 2 完了
 - コードネームを Life Map から Atlas へ変更（Workers name / D1 database_name も追随）
