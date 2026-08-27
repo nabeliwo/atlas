@@ -18,7 +18,12 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  /*
+   * 地図のピンと同じ色。UI 側のアクセントを地図から切り離さないことで、
+   * 「この色は、この地図の場所に関わるもの」という読み方が一貫する。
+   * shadcn/ui 既定のほぼ黒だと、地図と無関係な色が主要ボタンに乗ってしまう。
+   */
+  --primary: #2f6f8f;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -30,7 +35,8 @@
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* フォーカスリングもアクセントに合わせる */
+  --ring: #2f6f8f;
 }
 
 @theme inline {

@@ -13,9 +13,23 @@ export const CLUSTER_COUNT_LAYER_ID = 'places-cluster-count'
 export const PLACE_LAYER_ID = 'places-point'
 export const PLACE_LABEL_LAYER_ID = 'places-label'
 
-/** 単色。docs/04-ui-spec.md より、カテゴリを色分けで表現しない。 */
-const PIN_COLOR = '#2f6f8f'
-const PIN_COLOR_SELECTED = '#12475f'
+/**
+ * 色が持つ意味は1つだけ ―― 「記憶の厚み」。
+ *
+ * docs/04-ui-spec.md は「色分けでカテゴリを表現しない」と定める。
+ * 種別には色を使わない一方で、同じ色相の濃淡で訪問回数を表すのは
+ * 「Visit回数が多いほど視覚的に強くする」という同ドキュメントの要求に沿う。
+ *
+ * サイズと色の二重符号化にしているのは、小さいピンではサイズ差が
+ * 読み取りにくいため。どちらか一方でも意味が伝わる。
+ */
+const PIN_1_VISIT = '#7aadc6'
+const PIN_3_VISITS = '#4e8fae'
+const PIN_6_VISITS = '#2f6f8f'
+const PIN_12_VISITS = '#17475f'
+
+/** 選択中は色ではなく輪郭で示す。色は回数の意味に使い切っているため。 */
+const PIN_STROKE_SELECTED = '#17475f'
 
 export type PlaceFeatureProperties = {
   id: string
@@ -65,8 +79,17 @@ export const clusterLayer: CircleLayerSpecification = {
   source: PLACES_SOURCE_ID,
   filter: ['has', 'point_count'],
   paint: {
-    'circle-color': PIN_COLOR,
-    'circle-opacity': 0.85,
+    // 個別ピンと同じ「多いほど濃い」規則を、束ねた Place 数にも適用する
+    'circle-color': [
+      'step',
+      ['get', 'point_count'],
+      PIN_3_VISITS,
+      10,
+      PIN_6_VISITS,
+      30,
+      PIN_12_VISITS,
+    ],
+    'circle-opacity': 0.9,
     // point_count は「束ねられた Place の数」。Visit 数ではない。
     'circle-radius': ['step', ['get', 'point_count'], 15, 5, 20, 20, 26],
     'circle-stroke-width': 2,
@@ -97,11 +120,15 @@ export const placeLayer: CircleLayerSpecification = {
   source: PLACES_SOURCE_ID,
   filter: ['!', ['has', 'point_count']],
   paint: {
+    // 訪問回数が多いほど濃い。1回でも地図の下地から浮く明度に留めてある。
     'circle-color': [
-      'case',
-      ['boolean', ['feature-state', 'selected'], false],
-      PIN_COLOR_SELECTED,
-      PIN_COLOR,
+      'interpolate',
+      ['linear'],
+      ['get', 'visitCount'],
+      1, PIN_1_VISIT,
+      3, PIN_3_VISITS,
+      6, PIN_6_VISITS,
+      12, PIN_12_VISITS,
     ],
     'circle-opacity': 0.9,
     'circle-radius': [
@@ -113,11 +140,16 @@ export const placeLayer: CircleLayerSpecification = {
       5, 12,
       10, 16,
     ],
-    'circle-stroke-color': '#ffffff',
+    'circle-stroke-color': [
+      'case',
+      ['boolean', ['feature-state', 'selected'], false],
+      PIN_STROKE_SELECTED,
+      '#ffffff',
+    ],
     'circle-stroke-width': [
       'case',
       ['boolean', ['feature-state', 'selected'], false],
-      3,
+      3.5,
       2,
     ],
   },
