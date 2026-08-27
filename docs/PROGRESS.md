@@ -20,7 +20,7 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 ## 現在地
 
 - **現在フェーズ**: Phase 5 — 仕上げ
-- **状態**: 本番へデプロイ済み。Google のリダイレクトURI登録とログイン確認が残り
+- **状態**: **MVP 完成**。https://atlas.nabeliwo.workers.dev で稼働中
 - **最終更新**: 2026-08-27
 
 `pnpm db:reset && pnpm dev` でローカル環境が立ち上がる（詳細は README「開発」）。
@@ -147,7 +147,7 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 - [x] 本番 D1 の作成と `wrangler.jsonc` の `database_id` 差し替え
 - [x] 本番 secrets の登録（`wrangler secret put`）
 - [x] `wrangler.jsonc` の `vars.BETTER_AUTH_URL` を実際のデプロイ先URLに合わせる
-- [ ] Google OAuth クライアントに本番のリダイレクトURIを追加
+- [x] Google OAuth クライアントに本番のリダイレクトURIを追加
 - [x] 独自ドメインは使わない方針（workers.dev のまま）
 - [x] 施設検索 provider の API キー取得（Geoapify）— 2026-08-27 完了、実 API で疎通確認済み
 - [x] Google OAuth クライアント（client id / secret）の用意 — 2026-08-27 完了
@@ -163,6 +163,20 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 ## 作業ログ
 
 新しいものを上に追記する。
+
+### 2026-08-27 — MVP 完成
+`docs/07-mvp-scope.md` の Definition of Done 50項目をすべて満たし、
+本番で動作確認まで済んだ。
+
+- https://atlas.nabeliwo.workers.dev
+- 本番で Google ログイン、訪問の追加・編集・削除まで確認済み
+- タイトル / description / OGP / favicon を設定
+
+**ここから先は `docs/08-future-ideas.md` の領域。**
+統計・3D地球儀・ヒートマップ・ダークモードなどは MVP 対象外なので、
+着手する前に `docs/00-philosophy.md` の判断基準に立ち返ること。
+
+> この機能は、世界地図を眺める時間をもっと楽しくするか？
 
 ### 2026-08-27 — 本番へデプロイ
 - 本番 D1 `atlas-db` を作成し、マイグレーションを適用（データは空。seed は入れない）
