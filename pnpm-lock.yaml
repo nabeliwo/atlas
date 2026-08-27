@@ -68,6 +68,9 @@ devDependencies:
   '@tanstack/router-cli':
     specifier: ^1.132.0
     version: 1.167.33
+  '@types/geojson':
+    specifier: ^7946.0.16
+    version: 7946.0.16
   '@types/node':
     specifier: ^22.20.1
     version: 22.20.1
@@ -3907,7 +3910,6 @@ packages:
 
   /@types/geojson@7946.0.16:
     resolution: {integrity: sha512-6C8nqWur3j98U6+lXDfTUWIfgvZU+EumvpHKcYjujKH7woYyLj2sUmff0tRhrqM7BohUw7Pz3ZB1jj2gW9Fvmg==}
-    dev: false
 
   /@types/node@22.20.1:
     resolution: {integrity: sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==}

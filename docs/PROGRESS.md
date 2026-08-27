@@ -19,8 +19,8 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 
 ## 現在地
 
-- **現在フェーズ**: Phase 2 — 地図を主役にする
-- **状態**: Phase 1 完了 / Phase 2 未着手
+- **現在フェーズ**: Phase 3 — 管理者と書き込み
+- **状態**: Phase 2 実装完了（ブラウザでの目視確認待ち） / Phase 3 未着手
 - **最終更新**: 2026-08-27
 
 `pnpm db:reset && pnpm dev` でローカル環境が立ち上がる（詳細は README「開発」）。
@@ -43,21 +43,21 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 
 ## Phase 2: 地図を主役にする
 
-- [ ] map places クエリ（期間フィルタ対応）
-- [ ] Placeを地図に表示
-- [ ] 広域でクラスタリング
-- [ ] クラスタ数字は Place 数
-- [ ] 個別Placeのフィルタ後Visit回数を視覚表現（サイズ等）
-- [ ] ズーム時にPlace名表示（ラベル衝突はMapLibreに任せる）
-- [ ] Place詳細サイドパネル（desktop）
-- [ ] Place詳細ボトムシート（mobile）
-- [ ] Place名・住所・訪問回数・初回・最終
-- [ ] Visit履歴 newest first
-- [ ] `?place=` 直接URL
-- [ ] `?place=&visit=` 直接URL
-- [ ] 期間プリセット（今年 / 去年 / 過去5年）
-- [ ] 自由なfrom/to期間指定
-- [ ] 期間に応じて Place / Visit count / cluster count 再計算
+- [x] map places クエリ（期間フィルタ対応）
+- [x] Placeを地図に表示
+- [x] 広域でクラスタリング
+- [x] クラスタ数字は Place 数
+- [x] 個別Placeのフィルタ後Visit回数を視覚表現（サイズ等）
+- [x] ズーム時にPlace名表示（ラベル衝突はMapLibreに任せる）
+- [x] Place詳細サイドパネル（desktop）
+- [x] Place詳細ボトムシート（mobile）
+- [x] Place名・住所・訪問回数・初回・最終
+- [x] Visit履歴 newest first
+- [x] `?place=` 直接URL
+- [x] `?place=&visit=` 直接URL
+- [x] 期間プリセット（今年 / 去年 / 過去5年）
+- [x] 自由なfrom/to期間指定
+- [x] 期間に応じて Place / Visit count / cluster count 再計算
 
 ## Phase 3: 管理者と書き込み
 
@@ -120,6 +120,11 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 | 2026-08-27 | D1 の `database_id` はプレースホルダのまま | ローカル開発では未使用。デプロイ時に実IDへ差し替える |
 | 2026-08-27 | seed fixtures の `provider` は `'seed'` 固定 | 実際の外部施設検索（geoapify 等）の ID と衝突させないため |
 | 2026-08-27 | `visits`/`visit_links` の FK は `ON DELETE CASCADE` | Visit削除時に links が孤児にならないようにする。Place の削除判断はアプリ層で行う |
+| 2026-08-27 | コードネームを Atlas に変更 | Workers の name と D1 の database_name も `atlas` / `atlas-db` に揃えた |
+| 2026-08-27 | map places は `innerJoin` で取得 | 「期間内に1件以上 Visit がある Place」だけが自然に返り、Visit 0件の Place を公開UIに出さない不変条件がクエリで満たされる |
+| 2026-08-27 | Place 詳細にも期間フィルターを適用する | 期間は「地図上の集計全体」に効くという仕様に合わせた。全期間との差が出る場合はパネルに全期間の回数を併記する |
+| 2026-08-27 | 地図の移動は検索/URL 由来の選択時のみ | ピンをクリックした場合はすでに見えている位置なので動かさない。パネルに隠れないよう flyTo に offset を渡す |
+| 2026-08-27 | Place 詳細はクライアント側で取得 | 期間が変わったときだけ loader を再実行させるため（`loaderDeps` は from/to のみ）。`?place=` 直接アクセスでは1往復ぶん遅れて開く |
 
 ---
 
@@ -135,6 +140,32 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 ## 作業ログ
 
 新しいものを上に追記する。
+
+### 2026-08-27 — Phase 2 実装完了（目視確認待ち）
+- コードネームを Life Map から Atlas へ変更（Workers name / D1 database_name も追随）
+- `src/server/places.ts`: `getMapPlaces` / `getPlaceDetail` を server function として実装
+- `src/lib/date-range.ts`: 期間フィルターの型・プリセット・不正入力の除去
+- `src/components/map/place-layers.ts`: クラスタ / 個別ピン / ラベルのレイヤー定義
+  - クラスタの数字は `point_count`（= Place 数）。1 feature = 1 Place なので定義上ずれない
+  - 個別ピンは `visitCount` で半径を補間。色分けはしない
+  - ラベルは minzoom 11、`text-allow-overlap` を立てず衝突回避は MapLibre に任せる
+- `src/components/place/PlacePanel.tsx`: PC はサイドパネル / スマホはボトムシート
+- `src/components/filter/DateRangeFilter.tsx`: プリセット＋自由な from/to
+- `/` を検索パラメータ駆動に変更（`?place=` `?visit=` `?from=` `?to=`）
+
+**確認したこと**
+- 期間フィルターで Place 集合と Visit 回数が再計算される
+  （全期間 10件 → 2026年 4件 → 2023年 2件 → 2018年 2件、各 visitCount も期間内の値）
+- Visit 履歴が新しい順、期間で絞った場合の統計（filtered 1 / total 4）も想定どおり
+- `/` `?place=` `?place=&visit=` `?from=&to=` すべて 200
+
+**未確認**
+- ブラウザでの実描画。クラスタの見た目、ラベルの衝突具合、パネルのレイアウトは目視が必要
+
+**詰まった点**
+- 500 が出続けたが、原因はリネーム前の dev サーバーが 4 プロセス残っていたこと。
+  `pkill -f "vite dev"` は実際のコマンドライン（`vite.js dev`）に一致しないので効かない。
+  ポートを `ss -ltnp` で確認して PID で落とす。
 
 ### 2026-08-27 — Phase 1 完了
 - `docs/PROGRESS.md` を作成
