@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Loader2, MapPin, Search, X } from 'lucide-react'
 
+import { cn } from '@/lib/utils'
 import { searchExternalPlaces } from '@/server/visits'
 import { searchOwnPlaces, type OwnPlaceResult } from '@/server/places'
 import type { PlaceCandidate } from '@/server/place-search'
@@ -35,6 +36,13 @@ export function SearchBox({
   const [failed, setFailed] = useState(false)
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const itemRefs = useRef(new Map<number, HTMLButtonElement>())
+
+  /**
+   * キーボードで辿るための、セクションをまたいだ通し番号。
+   * 「登録した場所」→「施設を検索」の順で並べる（画面の並びと一致させる）。
+   */
+  const [activeIndex, setActiveIndex] = useState(-1)
 
   // 自分のデータは自前のDBなので、1文字から即座に引く
   useEffect(() => {
@@ -110,6 +118,61 @@ export function SearchBox({
     }
   }, [open])
 
+  type Item =
+    | { kind: 'own'; place: OwnPlaceResult }
+    | { kind: 'candidate'; candidate: PlaceCandidate }
+
+  const items: Array<Item> = [
+    ...own.map((place) => ({ kind: 'own' as const, place })),
+    ...(isAdmin
+      ? results.map((candidate) => ({ kind: 'candidate' as const, candidate }))
+      : []),
+  ]
+
+  const choose = (item: Item) => {
+    if (item.kind === 'own') onSelectOwnPlace(item.place.id)
+    else onSelectCandidate(item.candidate)
+    setOpen(false)
+    setQuery('')
+  }
+
+  // 候補が入れ替わったら選択位置を戻す
+  useEffect(() => {
+    setActiveIndex(-1)
+  }, [query])
+
+  // キーボードで動かしたとき、選択中の項目が隠れないようにする
+  useEffect(() => {
+    if (activeIndex < 0) return
+    itemRefs.current.get(activeIndex)?.scrollIntoView({ block: 'nearest' })
+  }, [activeIndex])
+
+  const onInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (items.length === 0) return
+      event.preventDefault()
+      setOpen(true)
+
+      const delta = event.key === 'ArrowDown' ? 1 : -1
+      setActiveIndex((prev) => {
+        const next = prev + delta
+        // 端で止めずに巻き戻す。候補が少ないので行き止まりの方が煩わしい。
+        if (next < 0) return items.length - 1
+        if (next >= items.length) return 0
+        return next
+      })
+      return
+    }
+
+    if (event.key === 'Enter') {
+      const item = items[activeIndex]
+      if (!item) return
+      // 選択中の候補があるときだけ、フォーム送信より優先して確定する
+      event.preventDefault()
+      choose(item)
+    }
+  }
+
   const showResults = open && query.trim().length >= 1
 
   return (
@@ -121,6 +184,13 @@ export function SearchBox({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setOpen(true)}
+          onKeyDown={onInputKeyDown}
+          role="combobox"
+          aria-expanded={showResults}
+          aria-controls="search-results"
+          aria-activedescendant={
+            activeIndex >= 0 ? `search-item-${activeIndex}` : undefined
+          }
           placeholder="場所を検索"
           className="min-w-0 flex-1 bg-transparent text-sm outline-none [&::-webkit-search-cancel-button]:hidden"
         />
@@ -139,7 +209,11 @@ export function SearchBox({
       </div>
 
       {showResults ? (
-        <div className="absolute top-full left-0 z-20 mt-2 max-h-[70dvh] w-full overflow-y-auto rounded-xl border border-border bg-background shadow-lg">
+        <div
+          id="search-results"
+          role="listbox"
+          className="absolute top-full left-0 z-20 mt-2 max-h-[70dvh] w-full overflow-y-auto rounded-xl border border-border bg-background shadow-lg"
+        >
           <p className="sticky top-0 border-b border-border bg-background px-3 py-2 text-xs font-medium text-muted-foreground">
             登録した場所
           </p>
@@ -149,16 +223,23 @@ export function SearchBox({
             </p>
           ) : (
             <ul>
-              {own.map((place) => (
+              {own.map((place, index) => (
                 <li key={place.id}>
                   <button
                     type="button"
-                    onClick={() => {
-                      onSelectOwnPlace(place.id)
-                      setOpen(false)
-                      setQuery('')
+                    id={`search-item-${index}`}
+                    role="option"
+                    aria-selected={activeIndex === index}
+                    ref={(node) => {
+                      if (node) itemRefs.current.set(index, node)
+                      else itemRefs.current.delete(index)
                     }}
-                    className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-secondary"
+                    onPointerMove={() => setActiveIndex(index)}
+                    onClick={() => choose({ kind: 'own', place })}
+                    className={cn(
+                      'flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors',
+                      activeIndex === index ? 'bg-secondary' : 'hover:bg-secondary',
+                    )}
                   >
                     <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1">
@@ -191,17 +272,26 @@ export function SearchBox({
               {loading ? '検索中…' : '見つかりませんでした。'}
             </p>
           ) : (
-            <ul className="max-h-[50dvh] overflow-y-auto">
-              {results.map((candidate) => (
+            <ul>
+              {results.map((candidate, offset) => {
+                const index = own.length + offset
+                return (
                 <li key={candidate.providerPlaceId}>
                   <button
                     type="button"
-                    onClick={() => {
-                      onSelectCandidate(candidate)
-                      setOpen(false)
-                      setQuery('')
+                    id={`search-item-${index}`}
+                    role="option"
+                    aria-selected={activeIndex === index}
+                    ref={(node) => {
+                      if (node) itemRefs.current.set(index, node)
+                      else itemRefs.current.delete(index)
                     }}
-                    className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-secondary"
+                    onPointerMove={() => setActiveIndex(index)}
+                    onClick={() => choose({ kind: 'candidate', candidate })}
+                    className={cn(
+                      'flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors',
+                      activeIndex === index ? 'bg-secondary' : 'hover:bg-secondary',
+                    )}
                   >
                     <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                     <span className="min-w-0">
@@ -225,7 +315,8 @@ export function SearchBox({
                     </span>
                   </button>
                 </li>
-              ))}
+                )
+              })}
             </ul>
           )}
           </>
