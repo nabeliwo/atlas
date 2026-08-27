@@ -1,8 +1,10 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { authClient } from '@/lib/auth-client'
+import { ProfileForm } from '@/components/profile/ProfileForm'
 import { getAdminStatus } from '@/server/admin'
+import { getProfile } from '@/server/profile'
 
 /**
  * 管理者の入口。
@@ -14,12 +16,18 @@ import { getAdminStatus } from '@/server/admin'
  * 許可されたGoogleアカウントかどうかをサーバー側で判定して表示を分ける。
  */
 export const Route = createFileRoute('/admin')({
-  loader: () => getAdminStatus(),
+  loader: async () => {
+    const status = await getAdminStatus()
+    // 管理者以外にプロフィールの編集内容を渡す必要はない
+    const profile = status.state === 'admin' ? await getProfile() : null
+    return { status, profile }
+  },
   component: AdminPage,
 })
 
 function AdminPage() {
-  const status = Route.useLoaderData()
+  const { status, profile } = Route.useLoaderData()
+  const router = useRouter()
   const [busy, setBusy] = useState(false)
 
   const signIn = async () => {
@@ -37,9 +45,10 @@ function AdminPage() {
     }
   }
 
+  // body は地図のため overflow:hidden。ここは自前でスクロールさせる。
   return (
-    <main className="flex min-h-dvh items-center justify-center p-6">
-      <div className="w-full max-w-sm rounded-xl border border-border p-6">
+    <main className="flex h-dvh items-start justify-center overflow-y-auto p-6">
+      <div className="w-full max-w-md rounded-xl border border-border p-6">
         <h1 className="text-lg font-semibold">Atlas 管理</h1>
 
         {status.state === 'anonymous' ? (
@@ -96,20 +105,28 @@ function AdminPage() {
               管理者としてログインしています。地図から訪問の追加・編集ができます。
             </p>
 
-            <Link
-              to="/"
-              className="mt-5 block w-full rounded-md bg-primary px-4 py-2 text-center text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-            >
-              地図へ戻る
-            </Link>
-            <button
-              type="button"
-              onClick={signOut}
-              disabled={busy}
-              className="mt-2 w-full rounded-md border border-border px-4 py-2 text-sm transition-colors hover:bg-secondary disabled:opacity-50"
-            >
-              ログアウト
-            </button>
+            <div className="mt-5 flex gap-2">
+              <Link
+                to="/"
+                className="flex-1 rounded-md bg-primary px-4 py-2 text-center text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                地図へ戻る
+              </Link>
+              <button
+                type="button"
+                onClick={signOut}
+                disabled={busy}
+                className="rounded-md border border-border px-4 py-2 text-sm transition-colors hover:bg-secondary disabled:opacity-50"
+              >
+                ログアウト
+              </button>
+            </div>
+
+            <ProfileForm
+              profile={profile}
+              fallbackName={status.name ?? ''}
+              onSaved={() => router.invalidate()}
+            />
           </>
         )}
       </div>

@@ -5,12 +5,14 @@ import { MapView } from '@/components/map/MapView'
 import { PlacePanel } from '@/components/place/PlacePanel'
 import { DateRangeFilter } from '@/components/filter/DateRangeFilter'
 import { SearchBox } from '@/components/search/SearchBox'
+import { ProfileBadge } from '@/components/profile/ProfileBadge'
 import { Panel } from '@/components/panel/Panel'
 import { VisitForm } from '@/components/visit/VisitForm'
 import { SimilarPlaceConfirm } from '@/components/visit/SimilarPlaceConfirm'
 import { isDateOnly, isEmptyRange, type DateRange } from '@/lib/date-range'
 import type { VisitInput } from '@/lib/visit-input'
 import { getIsAdmin } from '@/server/admin'
+import { getProfile } from '@/server/profile'
 import {
   getMapPlaces,
   getPlaceDetail,
@@ -50,10 +52,15 @@ export const Route = createFileRoute('/')({
   }),
   // 期間が変わったときだけ地図データを取り直す。Place の選択では取り直さない。
   loaderDeps: ({ search }) => ({ from: search.from, to: search.to }),
-  loader: async ({ deps }) => ({
-    places: await getMapPlaces({ data: deps }),
-    isAdmin: await getIsAdmin(),
-  }),
+  loader: async ({ deps }) => {
+    // 互いに独立なので直列に待たない
+    const [places, isAdmin, profile] = await Promise.all([
+      getMapPlaces({ data: deps }),
+      getIsAdmin(),
+      getProfile(),
+    ])
+    return { places, isAdmin, profile }
+  },
   component: HomePage,
 })
 
@@ -65,7 +72,7 @@ type PanelMode =
   | { kind: 'edit'; visit: PlaceDetailVisit; placeName: string }
 
 function HomePage() {
-  const { places, isAdmin } = Route.useLoaderData()
+  const { places, isAdmin, profile } = Route.useLoaderData()
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const router = useRouter()
@@ -282,6 +289,13 @@ function HomePage() {
             </p>
           ) : null}
         </div>
+
+        {/* 作者情報。地図の邪魔にならないよう、操作系の下に小さく置く。 */}
+        {profile ? (
+          <div className="pointer-events-auto">
+            <ProfileBadge profile={profile} />
+          </div>
+        ) : null}
       </div>
 
       {mode.kind === 'confirm-similar' ? (
