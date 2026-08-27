@@ -45,10 +45,17 @@ BETTER_AUTH_URL=http://localhost:3000
 # ---------------------------------------------------------------------------
 # 施設検索 provider
 # ---------------------------------------------------------------------------
-# 第一候補は Geoapify（https://www.geoapify.com/）の無料プラン。
+# 既定は Google Places API (New)。
+# Google Cloud Console で Places API (New) を有効化し、APIキーを作る。
+# キーには「API の制限」で Places API (New) のみを許可し、
+# 「割り当て」で日次上限を下げておくこと（無料枠を超えない値にする）。
+#
+# Geoapify に戻す場合は PLACE_SEARCH_PROVIDER=geoapify を設定し、
+# このキーも Geoapify のものに差し替える。
 # このキーは server function の内側でだけ使い、クライアントへ渡さない。
 # provider を差し替える場合も、この変数名のまま中身だけ入れ替える。
 PLACE_SEARCH_API_KEY=
+PLACE_SEARCH_PROVIDER=
 
 # ---------------------------------------------------------------------------
 # 地図タイル（任意）

@@ -66,13 +66,25 @@ Authenticationだけでは不足。
 
 MVPは無料優先。
 
-第一候補としてGeoapifyを評価する。
+当初はGeoapify（OpenStreetMap）を採用したが、個人経営の店の収録率が低く、
+「記憶に残した場所」ほど取りこぼすことが分かったため Google Places API (New)
+へ移行した（2026-08-28）。下の「検索品質が不十分ならGoogle Places等へ
+差し替える」を実際に行使した形。
 
-2026-08時点でGeoapify Freeは3,000 credits/day、Places APIは通常20件以下のrequestで1 credit。
+Google Places は SKU 単位の無料枠があり、Autocomplete と
+Place Details Essentials がそれぞれ 10,000 calls/month。
+施設名は autocomplete の予測テキストから取れるため、上位SKUの
+displayName を使わずに済む。詳細取得は location と types だけを要求する。
+
+外部検索は管理者のみが叩けるため、公開サイトでも課金は管理者の操作量に
+比例する。あわせてGoogle Cloud側で日次の割り当て上限を無料枠未満に設定し、
+超過が構造的に起きないようにしている。
+
+Geoapifyの実装は残してあり、`PLACE_SEARCH_PROVIDER=geoapify` で戻せる。
 
 Refs:
+- https://developers.google.com/maps/billing-and-pricing/pricing
 - https://www.geoapify.com/pricing/
-- https://www.geoapify.com/places-api/
 
 ### Abstraction requirement
 

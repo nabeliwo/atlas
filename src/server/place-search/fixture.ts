@@ -1,6 +1,7 @@
 import type {
   PlaceCandidate,
   PlaceSearchProvider,
+  PlaceSuggestion,
   SearchContext,
 } from './types'
 
@@ -17,7 +18,7 @@ export class FixturePlaceSearchProvider implements PlaceSearchProvider {
   async search(
     query: string,
     context?: SearchContext,
-  ): Promise<Array<PlaceCandidate>> {
+  ): Promise<Array<PlaceSuggestion>> {
     const q = query.trim().toLowerCase()
     if (!q) return []
 
@@ -28,9 +29,11 @@ export class FixturePlaceSearchProvider implements PlaceSearchProvider {
     ).slice(0, context?.limit ?? 8)
   }
 
-  async getById(providerPlaceId: string): Promise<PlaceCandidate | null> {
+  async resolve(suggestion: PlaceSuggestion): Promise<PlaceCandidate | null> {
     return (
-      FIXTURES.find((c) => c.providerPlaceId === providerPlaceId) ?? null
+      FIXTURES.find(
+        (c) => c.providerPlaceId === suggestion.providerPlaceId,
+      ) ?? null
     )
   }
 }

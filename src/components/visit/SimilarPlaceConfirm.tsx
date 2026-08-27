@@ -1,9 +1,9 @@
 import { Panel } from '@/components/panel/Panel'
-import type { PlaceCandidate } from '@/server/place-search'
+import type { PlaceSuggestion } from '@/server/place-search'
 import type { SimilarPlace } from '@/server/visits'
 
 type SimilarPlaceConfirmProps = {
-  candidate: PlaceCandidate
+  suggestion: PlaceSuggestion
   similar: SimilarPlace
   onUseExisting: () => void
   onCreateNew: () => void
@@ -19,7 +19,7 @@ type SimilarPlaceConfirmProps = {
  * 同名の別店舗という可能性もあるため自動では決められない。
  */
 export function SimilarPlaceConfirm({
-  candidate,
+  suggestion,
   similar,
   onUseExisting,
   onCreateNew,
@@ -50,12 +50,12 @@ export function SimilarPlaceConfirm({
 
         <div className="rounded-lg border border-border p-3">
           <p className="text-xs text-muted-foreground">これから追加しようとしている場所</p>
-          <p className="mt-1 text-sm font-medium">{candidate.name}</p>
-          {candidate.address ? (
-            <p className="mt-0.5 text-xs text-muted-foreground">{candidate.address}</p>
+          <p className="mt-1 text-sm font-medium">{suggestion.name}</p>
+          {suggestion.address ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">{suggestion.address}</p>
           ) : null}
-          {candidate.category ? (
-            <p className="mt-1 text-xs text-muted-foreground">{candidate.category}</p>
+          {suggestion.category ? (
+            <p className="mt-1 text-xs text-muted-foreground">{suggestion.category}</p>
           ) : null}
         </div>
       </div>

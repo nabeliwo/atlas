@@ -14,11 +14,11 @@ export const Route = createRootRoute({
         content:
           'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover',
       },
-      { title: 'Atlas — 記憶に残った場所の地図' },
+      { title: 'Atlas — 行った場所の地図' },
       {
         name: 'description',
         content:
-          '訪れて記憶に残った場所を、地図の上に集めたコレクションです。ピンを選ぶと、その場所を訪れた日の記録が読めます。',
+          '行った場所を地図に記録しています。ピンを選ぶと、その日のメモやリンクが読めます。',
       },
       /*
        * Place や Visit を URL で共有できる作りなので、共有先でも
@@ -26,10 +26,10 @@ export const Route = createRootRoute({
        */
       { property: 'og:type', content: 'website' },
       { property: 'og:site_name', content: 'Atlas' },
-      { property: 'og:title', content: 'Atlas — 記憶に残った場所の地図' },
+      { property: 'og:title', content: 'Atlas — 行った場所の地図' },
       {
         property: 'og:description',
-        content: '訪れて記憶に残った場所を、地図の上に集めたコレクションです。',
+        content: '行った場所を地図に記録しています。',
       },
     ],
     links: [

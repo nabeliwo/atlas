@@ -2,24 +2,33 @@
  * 外部施設検索 provider の境界。
  *
  * docs/06-technical-design.md より、provider は差し替え可能にする。
- * Geoapify 固有のレスポンス形をこの型より内側へ漏らさないこと。
- * DB には provider 名と providerPlaceId を保存し、同一施設の判定に使う。
+ * provider 固有のレスポンス形をこの型より内側へ漏らさないこと。
+ * DB には provider 名と providerPlaceId を保存し、同一性の判定に使う。
+ *
+ * 検索と確定を2段階に分けている。Google の autocomplete のように
+ * 「候補一覧には座標を含めず、選んだ1件だけ詳細を取りに行く」API があり、
+ * これは料金的にも正しい形（候補の件数ぶん詳細を引くと課金が跳ねる）。
  */
 
-/** 検索結果1件。places テーブルに保存するスナップショットと同じ形にしてある。 */
-export type PlaceCandidate = {
+/** 検索結果の1件。座標はまだ持たない。 */
+export type PlaceSuggestion = {
   provider: string
   providerPlaceId: string
 
   name: string
+  /** 候補を見分けるための補助情報。住所など。 */
+  address?: string
+  category?: string
+}
+
+/** places テーブルに保存するスナップショット。 */
+export type PlaceCandidate = PlaceSuggestion & {
   latitude: number
   longitude: number
 
-  address?: string
   countryCode?: string
   region?: string
   city?: string
-  category?: string
 }
 
 export type SearchContext = {
@@ -32,11 +41,19 @@ export interface PlaceSearchProvider {
   /** DB の places.provider に入る識別子。 */
   readonly name: string
 
-  search(query: string, context?: SearchContext): Promise<Array<PlaceCandidate>>
+  search(
+    query: string,
+    context?: SearchContext,
+  ): Promise<Array<PlaceSuggestion>>
 
   /**
-   * providerPlaceId から1件取得する。
-   * 検索結果を選んでから保存するまでの間に、値を取り直したい場合に使う。
+   * 候補を保存できる形まで確定させる。
+   *
+   * suggestion をそのまま受け取るのは、provider によっては
+   * 名前が検索結果側にしか無いため（Google の displayName は上位SKUで、
+   * autocomplete の予測テキストから取れば追加コストが要らない）。
+   *
+   * 確定できなければ null。呼び出し側は保存を中止する。
    */
-  getById(providerPlaceId: string): Promise<PlaceCandidate | null>
+  resolve(suggestion: PlaceSuggestion): Promise<PlaceCandidate | null>
 }

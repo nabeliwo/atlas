@@ -1,6 +1,7 @@
 import type {
   PlaceCandidate,
   PlaceSearchProvider,
+  PlaceSuggestion,
   SearchContext,
 } from './types'
 
@@ -34,7 +35,7 @@ export class GeoapifyPlaceSearchProvider implements PlaceSearchProvider {
   async search(
     query: string,
     context?: SearchContext,
-  ): Promise<Array<PlaceCandidate>> {
+  ): Promise<Array<PlaceSuggestion>> {
     const trimmed = query.trim()
     if (!trimmed) return []
 
@@ -63,7 +64,8 @@ export class GeoapifyPlaceSearchProvider implements PlaceSearchProvider {
       .filter((c): c is PlaceCandidate => c !== null)
   }
 
-  async getById(providerPlaceId: string): Promise<PlaceCandidate | null> {
+  async resolve(suggestion: PlaceSuggestion): Promise<PlaceCandidate | null> {
+    const providerPlaceId = suggestion.providerPlaceId
     const url = new URL('https://api.geoapify.com/v2/place-details')
     url.searchParams.set('id', providerPlaceId)
     url.searchParams.set('lang', 'ja')

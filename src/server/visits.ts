@@ -11,7 +11,11 @@ import {
   type VisitInput,
 } from '@/lib/visit-input'
 import { requireAdmin } from './auth'
-import { getPlaceSearchProvider, type PlaceCandidate } from './place-search'
+import {
+  getPlaceSearchProvider,
+  type PlaceCandidate,
+  type PlaceSuggestion,
+} from './place-search'
 import { fetchOgp } from './ogp/fetch-ogp'
 
 /**
@@ -31,8 +35,11 @@ export type SaveVisitResult =
 type CreateVisitPayload = {
   /** 既存 Place への再訪 */
   placeId?: string
-  /** 未登録施設からの追加。Place は裏側で作られる。 */
-  candidate?: PlaceCandidate
+  /**
+   * 未登録施設からの追加。Place は裏側で作られる。
+   * 座標や住所はクライアントから受け取らず、保存直前に provider から取り直す。
+   */
+  suggestion?: PlaceSuggestion
   visit: VisitInput
 }
 
@@ -142,9 +149,26 @@ export const createVisit = createServerFn({ method: 'POST' })
     let placeId = data.placeId
 
     if (!placeId) {
-      const candidate = data.candidate
-      if (!candidate) {
+      const suggestion = data.suggestion
+      if (!suggestion) {
         return { ok: false, reason: 'invalid', errors: ['場所が指定されていません。'] }
+      }
+
+      /*
+       * 保存する直前に provider から確定させる。
+       * クライアントから渡された座標をそのまま信用しないで済む。
+       * 検索一覧では詳細を引かないので、課金も選んだ1件ぶんに収まる。
+       */
+      const candidate = await getPlaceSearchProvider()
+        .resolve(suggestion)
+        .catch(() => null)
+
+      if (!candidate) {
+        return {
+          ok: false,
+          reason: 'invalid',
+          errors: ['場所の情報を取得できませんでした。時間をおいて試してください。'],
+        }
       }
 
       // 同一施設は同一 Place。既に登録済みなら再利用する。
@@ -161,21 +185,7 @@ export const createVisit = createServerFn({ method: 'POST' })
       if (sameFacility) {
         placeId = sameFacility.id
       } else {
-        /*
-         * 保存する直前に provider から取り直す。
-         *
-         * 検索は「検索語に一致した名前」を返すため、例えば「渋谷PARCO」で
-         * 引くと 'Shibuya Parco' になる。詳細取得は正規の名前
-         * （渋谷パルコ）を返すので、地図に残る名前が安定する。
-         *
-         * クライアントから渡された候補をそのまま信用せずに済む、という
-         * 副次的な効果もある。取得に失敗したら候補をそのまま使う。
-         */
-        const snapshot =
-          (await getPlaceSearchProvider()
-            .getById(candidate.providerPlaceId)
-            .catch(() => null)) ?? candidate
-
+        const snapshot = candidate
         placeId = crypto.randomUUID()
         statements.push(
           db.insert(places).values({
@@ -400,12 +410,16 @@ export type SimilarPlace = {
  * 該当が無ければ空配列を返し、フォームは確認を挟まずに保存へ進む。
  */
 export const findSimilarPlaces = createServerFn({ method: 'GET' })
-  .validator((input: { candidate: PlaceCandidate }) => input)
+  .validator((input: { suggestion: PlaceSuggestion }) => input)
   .handler(async ({ data }): Promise<Array<SimilarPlace>> => {
     await requireAdmin()
 
     const db = getDb()
-    const candidate = data.candidate
+    // 距離の判定に座標が要るので、ここでも確定させる
+    const candidate = await getPlaceSearchProvider()
+      .resolve(data.suggestion)
+      .catch(() => null)
+    if (!candidate) return []
 
     // providerPlaceId が完全一致するなら、そもそも確認は要らない
     const exact = await db.query.places.findFirst({
@@ -478,7 +492,7 @@ export const refetchOgp = createServerFn({ method: 'POST' })
 /** 外部施設検索。API キーは server 側に閉じ、クライアントへ渡さない。 */
 export const searchExternalPlaces = createServerFn({ method: 'GET' })
   .validator((input: { query: string }) => ({ query: String(input.query ?? '') }))
-  .handler(async ({ data }): Promise<Array<PlaceCandidate>> => {
+  .handler(async ({ data }): Promise<Array<PlaceSuggestion>> => {
     await requireAdmin()
 
     if (data.query.trim().length < 2) return []

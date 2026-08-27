@@ -4,7 +4,7 @@ import { Loader2, MapPin, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { searchExternalPlaces } from '@/server/visits'
 import { searchOwnPlaces, type OwnPlaceResult } from '@/server/places'
-import type { PlaceCandidate } from '@/server/place-search'
+import type { PlaceSuggestion } from '@/server/place-search'
 
 type SearchBoxProps = {
   /** 管理者だけが外部施設検索を使える。 */
@@ -12,7 +12,7 @@ type SearchBoxProps = {
   /** 登録済みの Place を選んだとき。地図を寄せて詳細を開く。 */
   onSelectOwnPlace: (placeId: string) => void
   /** 外部施設を選んだとき。Visit 追加フォームへ進む。 */
-  onSelectCandidate: (candidate: PlaceCandidate) => void
+  onSelectCandidate: (suggestion: PlaceSuggestion) => void
 }
 
 /**
@@ -31,7 +31,7 @@ export function SearchBox({
 }: SearchBoxProps) {
   const [query, setQuery] = useState('')
   const [own, setOwn] = useState<Array<OwnPlaceResult>>([])
-  const [results, setResults] = useState<Array<PlaceCandidate>>([])
+  const [results, setResults] = useState<Array<PlaceSuggestion>>([])
   const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
   const [open, setOpen] = useState(false)
@@ -151,7 +151,7 @@ export function SearchBox({
 
   type Item =
     | { kind: 'own'; place: OwnPlaceResult }
-    | { kind: 'candidate'; candidate: PlaceCandidate }
+    | { kind: 'candidate'; candidate: PlaceSuggestion }
 
   const items: Array<Item> = [
     ...own.map((place) => ({ kind: 'own' as const, place })),

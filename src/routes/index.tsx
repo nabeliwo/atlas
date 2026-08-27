@@ -26,7 +26,7 @@ import {
   updateVisit,
   type SimilarPlace,
 } from '@/server/visits'
-import type { PlaceCandidate } from '@/server/place-search'
+import type { PlaceSuggestion } from '@/server/place-search'
 
 /**
  * 地図の状態を URL クエリで表現する（docs/01-product-spec.md）。
@@ -67,8 +67,14 @@ export const Route = createFileRoute('/')({
 /** パネルに何を出しているか。地図は常に見えたまま切り替わる。 */
 type PanelMode =
   | { kind: 'none' }
-  | { kind: 'confirm-similar'; candidate: PlaceCandidate; similar: SimilarPlace }
-  | { kind: 'create'; candidate?: PlaceCandidate; placeId?: string; placeName: string; placeAddress?: string | null }
+  | { kind: 'confirm-similar'; suggestion: PlaceSuggestion; similar: SimilarPlace }
+  | {
+      kind: 'create'
+      suggestion?: PlaceSuggestion
+      placeId?: string
+      placeName: string
+      placeAddress?: string | null
+    }
   | { kind: 'edit'; visit: PlaceDetailVisit; placeName: string }
 
 function HomePage() {
@@ -147,14 +153,14 @@ function HomePage() {
   }, [router])
 
   /** 検索で外部施設を選んだとき。同名近接があれば確認を挟む。 */
-  const handleSelectCandidate = useCallback(async (candidate: PlaceCandidate) => {
+  const handleSelectCandidate = useCallback(async (suggestion: PlaceSuggestion) => {
     setFormError(null)
     setFormNotice(null)
     setSearchError(null)
 
     let similar: Array<SimilarPlace> = []
     try {
-      similar = await findSimilarPlaces({ data: { candidate } })
+      similar = await findSimilarPlaces({ data: { suggestion } })
     } catch {
       // 確認できなくても追加自体は続けられるようにする
       setSearchError('登録済みの場所との照合に失敗しました。')
@@ -162,15 +168,15 @@ function HomePage() {
 
     const first = similar[0]
     if (first) {
-      setMode({ kind: 'confirm-similar', candidate, similar: first })
+      setMode({ kind: 'confirm-similar', suggestion, similar: first })
       return
     }
 
     setMode({
       kind: 'create',
-      candidate,
-      placeName: candidate.name,
-      placeAddress: candidate.address,
+      suggestion,
+      placeName: suggestion.name,
+      placeAddress: suggestion.address,
     })
   }, [])
 
@@ -184,7 +190,7 @@ function HomePage() {
         const result = await createVisit({
           data: {
             placeId: mode.placeId,
-            candidate: mode.candidate,
+            suggestion: mode.suggestion,
             visit: input,
           },
         })
@@ -330,7 +336,7 @@ function HomePage() {
 
       {mode.kind === 'confirm-similar' ? (
         <SimilarPlaceConfirm
-          candidate={mode.candidate}
+          suggestion={mode.suggestion}
           similar={mode.similar}
           onClose={() => setMode({ kind: 'none' })}
           onUseExisting={() =>
@@ -344,9 +350,9 @@ function HomePage() {
           onCreateNew={() =>
             setMode({
               kind: 'create',
-              candidate: mode.candidate,
-              placeName: mode.candidate.name,
-              placeAddress: mode.candidate.address,
+              suggestion: mode.suggestion,
+              placeName: mode.suggestion.name,
+              placeAddress: mode.suggestion.address,
             })
           }
         />
