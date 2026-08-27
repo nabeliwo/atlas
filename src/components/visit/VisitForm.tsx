@@ -15,8 +15,10 @@ type VisitFormProps = {
   initialValue?: Partial<VisitInput>
   submitLabel: string
   submitting: boolean
-  /** サーバーから返ったエラー（重複日など） */
+  /** サーバーから返ったエラー */
   serverError?: string | null
+  /** エラーではない案内。既存 Visit の編集へ誘導したときの説明など。 */
+  notice?: string | null
   onSubmit: (input: VisitInput) => void
   onCancel: () => void
 }
@@ -38,6 +40,7 @@ export function VisitForm({
   submitLabel,
   submitting,
   serverError,
+  notice,
   onSubmit,
   onCancel,
 }: VisitFormProps) {
@@ -77,6 +80,12 @@ export function VisitForm({
           <p className="mt-1 text-sm text-muted-foreground">{placeAddress}</p>
         ) : null}
       </header>
+
+      {notice ? (
+        <p className="mt-4 rounded-md border border-border bg-secondary px-3 py-2 text-sm">
+          {notice}
+        </p>
+      ) : null}
 
       <div className="mt-5 space-y-4">
         <Field label="訪問日" required error={errorFor('visitedDate')}>

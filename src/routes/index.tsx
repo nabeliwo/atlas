@@ -81,6 +81,7 @@ function HomePage() {
   const [mode, setMode] = useState<PanelMode>({ kind: 'none' })
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [formNotice, setFormNotice] = useState<string | null>(null)
   const [detailVersion, setDetailVersion] = useState(0)
 
   const selectPlace = useCallback(
@@ -143,6 +144,7 @@ function HomePage() {
       return
     }
     setFormError(null)
+    setFormNotice(null)
     setMode({
       kind: 'create',
       candidate,
@@ -168,19 +170,31 @@ function HomePage() {
 
         if (result.ok) {
           setMode({ kind: 'none' })
+          setFormNotice(null)
           await refresh()
           selectPlace(result.placeId, result.visitId)
           return
         }
 
         if (result.reason === 'duplicate-date') {
-          // 同じ日の Visit は作らず、既存の編集へ誘導する（docs/03-user-flows.md）
-          setFormError(
-            'その日の訪問はすでに登録されています。既存の訪問を開きました。',
-          )
-          setMode({ kind: 'none' })
-          await refresh()
-          selectPlace(result.placeId, result.visitId)
+          // 同じ日の Visit は作らず、既存の編集へ誘導する（docs/03-user-flows.md）。
+          // 期間フィルターに関係なく引き当てたいので range は渡さない。
+          const existing = await getPlaceDetail({
+            data: { placeId: result.placeId },
+          })
+          const target = existing?.visits.find((v) => v.id === result.visitId)
+
+          if (existing && target) {
+            setFormError(null)
+            setFormNotice(
+              'その日の訪問はすでに登録されています。既存の記録を開きました。編集して保存できます。',
+            )
+            setMode({ kind: 'edit', visit: target, placeName: existing.name })
+            selectPlace(result.placeId, result.visitId)
+            return
+          }
+
+          setFormError('その日の訪問はすでに登録されています。')
           return
         }
 
@@ -205,6 +219,7 @@ function HomePage() {
 
         if (result.ok) {
           setMode({ kind: 'none' })
+          setFormNotice(null)
           await refresh()
           return
         }
@@ -294,6 +309,7 @@ function HomePage() {
             submitLabel="保存"
             submitting={submitting}
             serverError={formError}
+            notice={formNotice}
             onSubmit={handleCreate}
             onCancel={() => setMode({ kind: 'none' })}
           />
@@ -311,6 +327,7 @@ function HomePage() {
             submitLabel="更新"
             submitting={submitting}
             serverError={formError}
+            notice={formNotice}
             onSubmit={handleUpdate}
             onCancel={() => setMode({ kind: 'none' })}
           />
@@ -326,6 +343,7 @@ function HomePage() {
           onAddVisit={() => {
             if (!detail) return
             setFormError(null)
+            setFormNotice(null)
             setMode({
               kind: 'create',
               placeId: detail.id,
@@ -336,6 +354,7 @@ function HomePage() {
           onEditVisit={(visit) => {
             if (!detail) return
             setFormError(null)
+            setFormNotice(null)
             setMode({ kind: 'edit', visit, placeName: detail.name })
           }}
           onDeleteVisit={handleDelete}
