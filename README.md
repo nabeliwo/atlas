@@ -25,11 +25,15 @@
 ## 開発
 
 ```bash
-pnpm install       # 初回のみ
-pnpm db:migrate    # ローカル D1 にマイグレーション適用
-pnpm db:seed       # 開発用 fixtures 投入
-pnpm dev           # http://localhost:3000
+pnpm install              # 初回のみ
+cp .dev.vars.example .dev.vars   # secret を埋める（Phase 3 以降で必要）
+pnpm db:migrate           # ローカル D1 にマイグレーション適用
+pnpm db:seed              # 開発用 fixtures 投入
+pnpm dev                  # http://localhost:3000
 ```
+
+`.dev.vars` は gitignore 済みです。必要な値と取得方法は `.dev.vars.example`
+のコメントに書いてあります。地図の閲覧だけなら secret なしで動きます。
 
 | コマンド | 内容 |
 | --- | --- |

@@ -1,0 +1,62 @@
+# ローカル開発用の secret テンプレート。
+#
+#   cp .dev.vars.example .dev.vars
+#
+# としてから値を埋める。`.dev.vars` は .gitignore 済みなのでコミットされない。
+# このリポジトリは public なので、実際の値をこのファイル（.example のほう）に
+# 書かないこと。
+#
+# 本番（Cloudflare）へは wrangler で個別に登録する:
+#   npx wrangler secret put GOOGLE_CLIENT_ID
+#   npx wrangler secret put GOOGLE_CLIENT_SECRET
+#   ...
+
+
+# ---------------------------------------------------------------------------
+# Google OAuth
+# ---------------------------------------------------------------------------
+# Google Cloud Console > APIs & Services > Credentials で
+# 「OAuth client ID」を作成する（Application type: Web application）。
+#
+# Authorized redirect URIs に以下を登録する:
+#   http://localhost:3000/api/auth/callback/google
+#   https://<本番ドメイン>/api/auth/callback/google
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# ---------------------------------------------------------------------------
+# 管理者
+# ---------------------------------------------------------------------------
+# このアプリの唯一の編集者となる Google アカウントのメールアドレス。
+# OAuth 認証が通っただけでは権限を与えず、必ずこの値との完全一致を確認する。
+# 一致しないアカウントは、ログインできても管理権限を持たない。
+ADMIN_GOOGLE_EMAIL=
+
+# ---------------------------------------------------------------------------
+# Better Auth
+# ---------------------------------------------------------------------------
+# セッションの署名に使うランダム文字列。次のコマンドで生成できる:
+#   openssl rand -base64 32
+BETTER_AUTH_SECRET=
+
+# アプリの基準 URL。ローカルは通常このままでよい。
+BETTER_AUTH_URL=http://localhost:3000
+
+# ---------------------------------------------------------------------------
+# 施設検索 provider
+# ---------------------------------------------------------------------------
+# 第一候補は Geoapify（https://www.geoapify.com/）の無料プラン。
+# このキーは server function の内側でだけ使い、クライアントへ渡さない。
+# provider を差し替える場合も、この変数名のまま中身だけ入れ替える。
+PLACE_SEARCH_API_KEY=
+
+# ---------------------------------------------------------------------------
+# 地図タイル（任意）
+# ---------------------------------------------------------------------------
+# 未設定なら src/lib/map-config.ts の既定値（OpenFreeMap positron / キー不要）
+# が使われる。MapTiler など キーが必要な provider へ移す場合のみ設定する。
+#
+# 注意: スタイル URL とタイルのキーはブラウザへ渡るため、リポジトリの
+# 公開/非公開に関わらず公開情報になる。provider 側でドメイン制限をかけること。
+# MAP_STYLE_URL=
+# MAP_TILE_API_KEY=
