@@ -1,7 +1,10 @@
 import { drizzle } from 'drizzle-orm/d1'
 import { env } from 'cloudflare:workers'
 
-import * as schema from './schema'
+import * as appSchema from './schema'
+import * as authSchema from './auth-schema'
+
+const schema = { ...appSchema, ...authSchema }
 
 export type Db = ReturnType<typeof getDb>
 

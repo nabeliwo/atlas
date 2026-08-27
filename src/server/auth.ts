@@ -1,4 +1,7 @@
 import { env } from 'cloudflare:workers'
+import { getRequest } from '@tanstack/react-start/server'
+
+import { getAuth } from './auth-config'
 
 /**
  * 管理者の認可。
@@ -7,12 +10,8 @@ import { env } from 'cloudflare:workers'
  * 「このGoogleアカウントが唯一の管理者か」を必ず判定する。
  * write 系の server function は例外なく requireAdmin() を通す。
  *
- * Better Auth の組み込みは未完了。現時点では:
- *   - 本番: セッションを解決できないため、常に未認可（write は全て失敗する）
- *   - 開発: DEV_ADMIN_BYPASS=1 のときだけ認可する
- *
- * bypass は import.meta.env.DEV で囲ってあるので、本番ビルドでは
- * 条件が静的に false になり、コードごと落ちる。
+ * Google でログインできること自体は権限を意味しない。
+ * ADMIN_GOOGLE_EMAIL と完全一致した場合にだけ管理権限を与える。
  *
  * このモジュールは cloudflare:workers に依存するため、
  * クライアントから import してはいけない。
@@ -25,14 +24,29 @@ export type AdminSession = {
   avatarUrl?: string
 }
 
-export async function getAdminSession(): Promise<AdminSession | null> {
-  if (import.meta.env.DEV && env.DEV_ADMIN_BYPASS === '1') {
-    return { email: env.ADMIN_GOOGLE_EMAIL || 'dev@example.com', name: 'dev' }
-  }
+/** ログイン済みの Google アカウント。管理者とは限らない。 */
+export async function getLoginSession() {
+  const request = getRequest()
+  const result = await getAuth().api.getSession({ headers: request.headers })
+  return result?.user ?? null
+}
 
-  // TODO(Phase 3): Better Auth のセッションを解決し、
-  // session.user.email === env.ADMIN_GOOGLE_EMAIL を完全一致で確認する。
-  return null
+export async function getAdminSession(): Promise<AdminSession | null> {
+  const adminEmail = env.ADMIN_GOOGLE_EMAIL?.trim()
+  // 管理者が設定されていないなら、誰も管理者ではない
+  if (!adminEmail) return null
+
+  const user = await getLoginSession()
+  if (!user?.email) return null
+
+  // 大文字小文字だけを吸収する。部分一致や別ドメインは認めない。
+  if (user.email.toLowerCase() !== adminEmail.toLowerCase()) return null
+
+  return {
+    email: user.email,
+    name: user.name ?? undefined,
+    avatarUrl: user.image ?? undefined,
+  }
 }
 
 export async function isAdmin(): Promise<boolean> {

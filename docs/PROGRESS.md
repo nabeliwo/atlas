@@ -20,7 +20,7 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 ## 現在地
 
 - **現在フェーズ**: Phase 3 — 管理者と書き込み
-- **状態**: Phase 2 完了（ブラウザでの動作確認済み） / Phase 3 未着手
+- **状態**: Phase 3 実装完了（Google ログインの実地確認待ち）
 - **最終更新**: 2026-08-27
 
 `pnpm db:reset && pnpm dev` でローカル環境が立ち上がる（詳細は README「開発」）。
@@ -61,25 +61,25 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 
 ## Phase 3: 管理者と書き込み
 
-- [ ] Better Auth + Google OAuth
-- [ ] `/admin` でGoogleログイン
-- [ ] `ADMIN_GOOGLE_EMAIL` 完全一致による admin authorization
-- [ ] 全 write server function で毎回 authorization
-- [ ] 一般画面にログインボタンを出さない
-- [ ] ログイン時のみ管理UIを表示
-- [ ] `PlaceSearchProvider` 抽象化
-- [ ] 外部施設検索の実装（provider: Geoapify 候補）
-- [ ] 新規施設選択から Visit 追加
-- [ ] Place は裏側で自動作成（同一transaction）
-- [ ] 再訪は既存 Place へ Visit 追加
-- [ ] Place詳細から Visit 追加
-- [ ] 検索結果から Visit 追加
-- [ ] Visit日付必須 / タイトル任意
-- [ ] `Place × visitedDate` unique（重複時は既存Visit編集へ誘導）
-- [ ] Visit編集
-- [ ] Visit削除
-- [ ] 最後のVisit削除時に警告ダイアログ
-- [ ] Visit 0件なら Place を地図から除去
+- [x] Better Auth + Google OAuth
+- [x] `/admin` でGoogleログイン
+- [x] `ADMIN_GOOGLE_EMAIL` 完全一致による admin authorization
+- [x] 全 write server function で毎回 authorization
+- [x] 一般画面にログインボタンを出さない
+- [x] ログイン時のみ管理UIを表示
+- [x] `PlaceSearchProvider` 抽象化
+- [x] 外部施設検索の実装（provider: Geoapify 候補）
+- [x] 新規施設選択から Visit 追加
+- [x] Place は裏側で自動作成（同一transaction）
+- [x] 再訪は既存 Place へ Visit 追加
+- [x] Place詳細から Visit 追加
+- [x] 検索結果から Visit 追加
+- [x] Visit日付必須 / タイトル任意
+- [x] `Place × visitedDate` unique（重複時は既存Visit編集へ誘導）
+- [x] Visit編集
+- [x] Visit削除
+- [x] 最後のVisit削除時に警告ダイアログ
+- [x] Visit 0件なら Place を地図から除去
 
 ## Phase 4: リンク・メモ・検索
 
@@ -125,6 +125,10 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 | 2026-08-27 | Place 詳細にも期間フィルターを適用する | 期間は「地図上の集計全体」に効くという仕様に合わせた。全期間との差が出る場合はパネルに全期間の回数を併記する |
 | 2026-08-27 | 地図の移動は検索/URL 由来の選択時のみ | ピンをクリックした場合はすでに見えている位置なので動かさない。パネルに隠れないよう flyTo に offset を渡す |
 | 2026-08-27 | 地図上のUIは「左=操作 / 右=詳細」に分ける | Place 詳細パネルを右、期間フィルターとズームボタンを左に配置。Phase 4 の検索欄と Phase 5 のプロフィールは左側に置く前提で場所を空けてある |
+| 2026-08-27 | 認証は Better Auth + Google OAuth、認可は別建て | ログインできること自体は権限を意味しない。`ADMIN_GOOGLE_EMAIL` と大文字小文字だけ吸収した完全一致で判定する |
+| 2026-08-27 | `auth-schema.ts` は Better Auth CLI で生成する | 列名・型が Better Auth の期待とズレると実行時まで気づけない。手書きしない |
+| 2026-08-27 | drizzle-orm を 0.45.2 へ更新 | Better Auth の drizzle adapter が `>=0.45.2` を要求するため |
+| 2026-08-27 | `DEV_ADMIN_BYPASS` は廃止 | 実際の認証が入ったため役目を終えた |
 | 2026-08-27 | Geoapify は Geocoding Autocomplete を使う | 施設名で引きたいため。Places API はカテゴリと範囲で引く API でテキスト検索に向かない |
 | 2026-08-27 | `getById` は要求した providerPlaceId を保持する | place-details は施設としては正しいものを返すが、応答中の place_id は要求値と異なる。応答側を採用すると同じ施設の ID が呼ぶたびに変わる |
 | 2026-08-27 | Place 詳細はクライアント側で取得 | 期間が変わったときだけ loader を再実行させるため（`loaderDeps` は from/to のみ）。`?place=` 直接アクセスでは1往復ぶん遅れて開く |
@@ -148,6 +152,27 @@ Atlas の実装進捗を記録する唯一のドキュメント。
 ## 作業ログ
 
 新しいものを上に追記する。
+
+### 2026-08-27 — Phase 3 実装完了（Google ログインの実地確認待ち）
+- `PlaceSearchProvider` 抽象化 + Geoapify provider（実 API と突合済み）+ 開発用ダミー
+- `requireAdmin()` を全 write の先頭に置く構造
+- D1 に対話的トランザクションが無いため、原子性は `db.batch()` で担保
+- 同一施設の二重登録対策（50m 以内は自動統合、50〜250m は保存前に確認）
+- 検索欄 / Visitフォーム / 管理者導線 / 削除確認
+- Better Auth + Google OAuth、`/admin` を唯一の入口として実装
+- 認証テーブルは `@better-auth/cli generate` で生成し `0001_auth_tables.sql` として適用
+
+**確認したこと**
+- `/api/auth/ok` が 200、`/api/auth/get-session` が未ログインで null
+- `sign-in/social` が正しい Google 認可URLを返す
+  （redirect_uri = `http://localhost:3000/api/auth/callback/google`）
+- 未ログインでは地図に検索欄も編集導線も出ず、`isAdmin` が false
+
+**未確認**
+- ブラウザで実際に Google ログインを通すところ（要ユーザー操作）
+
+**注意**
+- `pnpm db:reset` は認証テーブルも消えるため、実行後は再ログインが必要
 
 ### 2026-08-27 — Phase 2 完了
 - コードネームを Life Map から Atlas へ変更（Workers name / D1 database_name も追随）
