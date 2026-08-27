@@ -102,7 +102,8 @@ function HomePage() {
         onSelectPlace={selectPlace}
       />
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-end p-4">
+      {/* 操作系は左に集約する。右は Place 詳細パネルが使う。 */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-start p-4">
         <div className="pointer-events-auto">
           <DateRangeFilter value={range} onChange={changeRange} />
         </div>

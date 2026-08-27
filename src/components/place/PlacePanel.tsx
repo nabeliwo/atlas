@@ -50,8 +50,8 @@ export function PlacePanel({
         // mobile: bottom sheet
         'inset-x-0 bottom-0 rounded-t-2xl border-t border-border',
         expanded ? 'h-[85dvh]' : 'h-[55dvh]',
-        // desktop: side panel
-        'md:inset-y-4 md:right-auto md:bottom-auto md:left-4 md:h-auto md:max-h-[calc(100dvh-2rem)]',
+        // desktop: side panel（左は操作系、右は詳細、という住み分け）
+        'md:inset-y-4 md:left-auto md:bottom-auto md:right-4 md:h-auto md:max-h-[calc(100dvh-2rem)]',
         'md:w-[380px] md:rounded-xl md:border',
       )}
       aria-label="Place の詳細"

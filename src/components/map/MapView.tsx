@@ -68,7 +68,8 @@ export function MapView({ places, selectedPlaceId, onSelectPlace }: MapViewProps
         attributionControl: { compact: true },
       })
 
-      map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right')
+      // 右側は詳細パネルが使うので、操作系は左に寄せる
+      map.addControl(new NavigationControl({ showCompass: false }), 'bottom-left')
       map.on('error', () => setFailed(true))
 
       map.on('load', () => {
@@ -194,13 +195,13 @@ export function MapView({ places, selectedPlaceId, onSelectPlace }: MapViewProps
 
 /**
  * 詳細パネル/ボトムシートに隠れない位置へ寄せるためのオフセット。
- * PC は左のパネル分だけ右へ、スマホは下のシート分だけ上へずらす。
+ * PC は右のパネル分だけ左へ、スマホは下のシート分だけ上へずらす。
  */
 function panelOffset(): [number, number] {
   if (typeof window === 'undefined') return [0, 0]
 
   const isDesktop = window.matchMedia('(min-width: 768px)').matches
-  if (isDesktop) return [Math.min(window.innerWidth * 0.16, 190), 0]
+  if (isDesktop) return [-Math.min(window.innerWidth * 0.16, 190), 0]
 
   return [0, -window.innerHeight * 0.2]
 }

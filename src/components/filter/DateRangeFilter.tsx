@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Calendar, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -21,15 +21,36 @@ type DateRangeFilterProps = {
  */
 export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
   const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement | null>(null)
   const today = new Date()
   const activePreset = matchPreset(value, today)
   const active = !isEmptyRange(value)
 
+  // 地図の上に浮いているので、外側クリックと Escape で閉じられるようにする
+  useEffect(() => {
+    if (!open) return
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
         className={cn(
           'flex items-center gap-2 rounded-full border border-border bg-background px-3.5 py-2 text-sm shadow-sm transition-colors hover:bg-secondary',
           active && 'border-foreground/25 font-medium',
@@ -51,7 +72,7 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
       ) : null}
 
       {open ? (
-        <div className="absolute top-full left-0 z-20 mt-2 w-[280px] rounded-xl border border-border bg-background p-3 shadow-lg">
+        <div className="absolute top-full left-0 z-20 mt-2 w-[280px] max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-background p-3 shadow-lg">
           <div className="flex flex-wrap gap-1.5">
             {DATE_RANGE_PRESETS.map((preset) => (
               <button
