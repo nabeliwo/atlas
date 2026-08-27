@@ -175,6 +175,16 @@ Atlas の実装進捗を記録する唯一のドキュメント。
   追記していた。アプリは `env.DB` を参照するため、そのままでは本番でDBに繋がらない。
   既存の `DB` バインディングに ID を入れる形へ統合した。
 - `pnpm deploy` は pnpm 自身のコマンドと衝突する。`pnpm run deploy` が正しい。
+- **ローカル D1 の保存先は `database_id` ごとに分かれている。**
+  本番用の実IDへ差し替えた時点でローカルの参照先が空のDBに切り替わり、
+  `no such table: places` で落ちた。旧データは
+  `.wrangler/state/v3/d1/miniflare-D1DatabaseObject/` に別ファイルとして
+  残っているので、そちらを新しい参照先へコピーすれば復旧できる。
+  素直にやり直すなら `pnpm db:migrate && pnpm db:seed`。
+- dev サーバーを複数立てると、同じローカル D1 を奪い合ってクエリが失敗する。
+  ポートが 3001 以降になっていたら二重起動を疑う。
+  `pkill -f "vite dev"` は実際のコマンドライン（`vite.js dev`）に一致しないので
+  効かない。`ss -ltnp` でポートを見て PID で落とす。
 - workers.dev のサブドメインは Worker ごとではなくアカウント全体に1つ。
   当初 `pokeca-buyback` だったものを `nabeliwo` へ変更した（反映に約2分）。
 

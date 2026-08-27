@@ -61,8 +61,19 @@ npx wrangler d1 create atlas-db
 ```
 
 出力された `database_id` を `wrangler.jsonc` の
-`d1_databases[0].database_id` に貼り替えます（初期値は
-`local-placeholder-id` というプレースホルダです）。
+`d1_databases[0].database_id` に貼り替えます。
+
+> [!WARNING]
+> **ローカル D1 の保存先は `database_id` ごとに分かれています。**
+> ID を変更すると、ローカルの参照先が空の別データベースに切り替わり、
+> `no such table: places` で落ちます。変更後は必ず
+> `pnpm db:migrate && pnpm db:seed` をやり直してください。
+> 変更前のデータは `.wrangler/state/v3/d1/miniflare-D1DatabaseObject/`
+> に別ファイルとして残っています。
+
+`wrangler d1 create` は `wrangler.jsonc` に**別のバインディングを追記する**
+ことがあります。アプリは `env.DB` を参照するので、既存の `DB` バインディングに
+ID を入れる形へ統合してください。バインディングが2つあると本番でDBに繋がりません。
 
 ```bash
 pnpm db:migrate:remote     # 本番 D1 にマイグレーション適用
