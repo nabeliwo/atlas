@@ -36,6 +36,7 @@ export function SearchBox({
   const [failed, setFailed] = useState(false)
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
   const itemRefs = useRef(new Map<number, HTMLButtonElement>())
 
   /**
@@ -101,6 +102,36 @@ export function SearchBox({
       setLoading(false)
     }
   }, [query, isAdmin])
+
+  /**
+   * `/` で検索欄へ入る。地図を見ている状態から手を動かさずに検索へ移れる。
+   * 入力中の要素があるときは何もしない（本文に `/` を打てなくなるため）。
+   */
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== '/') return
+      if (event.ctrlKey || event.metaKey || event.altKey) return
+      // IME 変換中のキーは拾わない
+      if (event.isComposing) return
+
+      const target = event.target as HTMLElement | null
+      if (
+        target &&
+        (target.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+      ) {
+        return
+      }
+
+      event.preventDefault()
+      inputRef.current?.focus()
+      inputRef.current?.select()
+      setOpen(true)
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -170,6 +201,12 @@ export function SearchBox({
       // 選択中の候補があるときだけ、フォーム送信より優先して確定する
       event.preventDefault()
       choose(item)
+      return
+    }
+
+    if (event.key === 'Escape') {
+      setOpen(false)
+      event.currentTarget.blur()
     }
   }
 
@@ -180,6 +217,7 @@ export function SearchBox({
       <div className="flex items-center gap-2 rounded-full border border-border bg-background px-3.5 py-2 shadow-sm">
         <Search className="size-4 shrink-0 text-muted-foreground" />
         <input
+          ref={inputRef}
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -205,7 +243,15 @@ export function SearchBox({
           >
             <X className="size-4" />
           </button>
-        ) : null}
+        ) : (
+          /* 何も入力していないときだけ、ショートカットの存在を示す */
+          <kbd
+            aria-hidden
+            className="hidden shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground sm:block"
+          >
+            /
+          </kbd>
+        )}
       </div>
 
       {showResults ? (
