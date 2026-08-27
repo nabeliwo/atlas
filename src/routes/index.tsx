@@ -292,7 +292,7 @@ function HomePage() {
             onSelectCandidate={handleSelectCandidate}
           />
         </div>
-        <div className="pointer-events-auto flex items-center gap-2.5">
+        <div className="pointer-events-auto flex flex-wrap items-center gap-2">
           <DateRangeFilter value={range} onChange={changeRange} />
           {/*
             期間で絞ったときだけ件数を出す。全期間では地図そのものが
@@ -351,7 +351,7 @@ function HomePage() {
           }
         />
       ) : mode.kind === 'create' ? (
-        <Panel onClose={() => setMode({ kind: 'none' })}>
+        <Panel defaultExpanded onClose={() => setMode({ kind: 'none' })}>
           <VisitForm
             placeName={mode.placeName}
             placeAddress={mode.placeAddress}
@@ -364,7 +364,7 @@ function HomePage() {
           />
         </Panel>
       ) : mode.kind === 'edit' ? (
-        <Panel onClose={() => setMode({ kind: 'none' })}>
+        <Panel defaultExpanded onClose={() => setMode({ kind: 'none' })}>
           <VisitForm
             placeName={mode.placeName}
             initialValue={{

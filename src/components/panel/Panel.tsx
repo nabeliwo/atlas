@@ -9,6 +9,11 @@ type PanelProps = {
   children: ReactNode
   /** 閉じるボタンの読み上げ用ラベル */
   closeLabel?: string
+  /**
+   * スマホで最初から広げておく。
+   * フォームは入力欄が多く、畳んだ高さだと下端が隠れるため。
+   */
+  defaultExpanded?: boolean
 }
 
 /**
@@ -19,9 +24,14 @@ type PanelProps = {
  * 詳細表示と入力フォームで同じ器を使う。スマホでは
  * 「追加/編集フォームも同じボトムシート内で切り替える」ため。
  */
-export function Panel({ onClose, children, closeLabel = '閉じる' }: PanelProps) {
+export function Panel({
+  onClose,
+  children,
+  closeLabel = '閉じる',
+  defaultExpanded = false,
+}: PanelProps) {
   // スマホでは本文を読む/書くために十分広げられるようにする
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(defaultExpanded)
 
   return (
     <aside
