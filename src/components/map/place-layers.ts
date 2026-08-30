@@ -23,10 +23,15 @@ export const PLACE_LABEL_LAYER_ID = 'places-label'
  * サイズと色の二重符号化にしているのは、小さいピンではサイズ差が
  * 読み取りにくいため。どちらか一方でも意味が伝わる。
  */
-const PIN_1_VISIT = '#7aadc6'
-const PIN_3_VISITS = '#4e8fae'
-const PIN_6_VISITS = '#2f6f8f'
-const PIN_12_VISITS = '#17475f'
+/*
+ * 1回訪問の色でも地図の下地に沈まない濃さを下限にする。
+ * 淡すぎると「行った場所」より道路や地名の方が強く見えてしまい、
+ * 何のための地図か分からなくなる。
+ */
+const PIN_1_VISIT = '#5b9dbd'
+const PIN_3_VISITS = '#3d84a5'
+const PIN_6_VISITS = '#26688a'
+const PIN_12_VISITS = '#123f57'
 
 /** 選択中は色ではなく輪郭で示す。色は回数の意味に使い切っているため。 */
 const PIN_STROKE_SELECTED = '#17475f'
@@ -91,7 +96,7 @@ export const clusterLayer: CircleLayerSpecification = {
     ],
     'circle-opacity': 0.9,
     // point_count は「束ねられた Place の数」。Visit 数ではない。
-    'circle-radius': ['step', ['get', 'point_count'], 15, 5, 20, 20, 26],
+    'circle-radius': ['step', ['get', 'point_count'], 17, 5, 22, 20, 28],
     'circle-stroke-width': 2,
     'circle-stroke-color': '#ffffff',
   },
@@ -131,14 +136,18 @@ export const placeLayer: CircleLayerSpecification = {
       12, PIN_12_VISITS,
     ],
     'circle-opacity': 0.9,
+    /*
+     * 地図のラベルや道路より前に出る大きさにする。
+     * 「素の地図 < Place < 何度も行った Place」の順に強くなるのが狙い。
+     */
     'circle-radius': [
       'interpolate',
       ['linear'],
       ['get', 'visitCount'],
-      1, 6,
-      2, 8,
-      5, 12,
-      10, 16,
+      1, 9,
+      2, 11,
+      5, 15,
+      10, 19,
     ],
     'circle-stroke-color': [
       'case',
@@ -146,11 +155,12 @@ export const placeLayer: CircleLayerSpecification = {
       PIN_STROKE_SELECTED,
       '#ffffff',
     ],
+    // 白い縁が地図からピンを切り離すハローとして効く
     'circle-stroke-width': [
       'case',
       ['boolean', ['feature-state', 'selected'], false],
-      3.5,
-      2,
+      4,
+      2.5,
     ],
   },
 }
@@ -167,15 +177,16 @@ export const placeLabelLayer: SymbolLayerSpecification = {
   minzoom: 11,
   layout: {
     'text-field': ['get', 'name'],
-    'text-font': ['Noto Sans Regular'],
-    'text-size': 12,
-    'text-offset': [0, 1.2],
+    // 地図側のラベルは Regular なので、太字にして前に出す
+    'text-font': ['Noto Sans Bold'],
+    'text-size': 13,
+    'text-offset': [0, 1.1],
     'text-anchor': 'top',
     'text-max-width': 10,
   },
   paint: {
-    'text-color': '#1b1d1f',
+    'text-color': '#123f57',
     'text-halo-color': '#ffffff',
-    'text-halo-width': 1.5,
+    'text-halo-width': 2,
   },
 }

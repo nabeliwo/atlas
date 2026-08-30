@@ -26,3 +26,36 @@ export const mapConfig = {
   minZoom: 1,
   maxZoom: 18,
 } as const
+
+/**
+ * 地図側の主張を抑えるための調整。
+ *
+ * このアプリの主役は「自分が行った場所」で、地図はその背景。
+ * 素の positron は道路番号のシールドや道路名が濃く、拡大すると
+ * Place のピンより目立ってしまう。ナビゲーション用の情報は
+ * Atlas では使わないので、思い切って落とす。
+ *
+ * レイヤーIDは provider 固有なので、タイルを差し替えたらここも見直す
+ * （見つからないIDは黙って無視されるので、壊れはしない）。
+ */
+export const basemapAdjustments = {
+  /** 道路番号のシールド。経路探索の道具で、記憶の地図には要らない。 */
+  hide: [
+    'highway-shield-non-us',
+    'highway-shield-us-interstate',
+    'road_shield_us',
+  ],
+
+  /**
+   * 消すと現在地が分からなくなるが、濃いままだとピンと競合するもの。
+   * 残しつつ後退させる。
+   */
+  dim: [
+    { id: 'highway-name-major', opacity: 0.45 },
+    { id: 'highway-name-minor', opacity: 0.4 },
+    { id: 'highway-name-path', opacity: 0.35 },
+    { id: 'label_other', opacity: 0.55 },
+    { id: 'label_village', opacity: 0.6 },
+    { id: 'label_town', opacity: 0.7 },
+  ],
+} as const

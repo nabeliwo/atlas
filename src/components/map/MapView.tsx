@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
 
-import { mapConfig } from '@/lib/map-config'
+import { basemapAdjustments, mapConfig } from '@/lib/map-config'
 import type { MapPlace } from '@/server/places'
 import {
   CLUSTER_COUNT_LAYER_ID,
@@ -75,6 +75,8 @@ export function MapView({ places, selectedPlaceId, onSelectPlace }: MapViewProps
       map.on('load', () => {
         if (cancelled) return
 
+        muteBasemap(map)
+
         map.addSource(
           PLACES_SOURCE_ID,
           placesSource(toFeatureCollection(placesRef.current)),
@@ -84,28 +86,51 @@ export function MapView({ places, selectedPlaceId, onSelectPlace }: MapViewProps
         map.addLayer(placeLayer)
         map.addLayer(placeLabelLayer)
 
-        // クラスタをクリックしたら、そのクラスタが解けるズームまで寄る
-        map.on('click', CLUSTER_LAYER_ID, (event) => {
-          const feature = event.features?.[0]
-          const clusterId = feature?.properties?.cluster_id
+        /*
+         * レイヤーに直接 click を張ると、判定が円の内側だけになる。
+         * ピンの直径は最大でも 38px 前後で、指で正確に押すには小さい。
+         * タップ位置のまわりに矩形を取って探すことで、見た目を変えずに
+         * 当たり判定だけ広げる。
+         */
+        map.on('click', (event) => {
+          const pad = hitPadding()
+          const box: [[number, number], [number, number]] = [
+            [event.point.x - pad, event.point.y - pad],
+            [event.point.x + pad, event.point.y + pad],
+          ]
+
+          /*
+           * 個別ピンを優先する。クラスタは面積が大きく、重なると常に勝ってしまう。
+           * Place 名のラベルも同じ feature なので、文字を押しても選べるようにする。
+           * 文字は面積が広く、スマホでは実質的な的が大きくなる。
+           */
+          const points = map.queryRenderedFeatures(box, {
+            layers: [PLACE_LAYER_ID, PLACE_LABEL_LAYER_ID],
+          })
+          const id = points[0]?.properties?.id
+          if (typeof id === 'string') {
+            selectedByClickRef.current = id
+            onSelectPlaceRef.current(id)
+            return
+          }
+
+          const clusters = map.queryRenderedFeatures(box, {
+            layers: [CLUSTER_LAYER_ID],
+          })
+          const cluster = clusters[0]
+          const clusterId = cluster?.properties?.cluster_id
           if (clusterId === undefined) return
 
+          // クラスタは、それが解けるズームまで寄る
           const source = map.getSource(PLACES_SOURCE_ID) as GeoJSONSource
           void source.getClusterExpansionZoom(clusterId).then((zoom) => {
-            const geometry = feature?.geometry
+            const geometry = cluster?.geometry
             if (geometry?.type !== 'Point') return
             map.easeTo({
               center: geometry.coordinates as [number, number],
               zoom,
             })
           })
-        })
-
-        map.on('click', PLACE_LAYER_ID, (event) => {
-          const id = event.features?.[0]?.properties?.id
-          if (typeof id !== 'string') return
-          selectedByClickRef.current = id
-          onSelectPlaceRef.current(id)
         })
 
         for (const layerId of [
@@ -191,6 +216,34 @@ export function MapView({ places, selectedPlaceId, onSelectPlace }: MapViewProps
       ) : null}
     </div>
   )
+}
+
+/**
+ * タップ位置から探す範囲（px）。
+ *
+ * 指はマウスより不正確なので、タッチ環境では広く取る。
+ * 半径 9px のピンに 16px の余裕を足すと、実質 50px 角の的になり、
+ * タッチターゲットの目安（44px 前後）を満たす。
+ */
+function hitPadding(): number {
+  if (typeof window === 'undefined') return 6
+  return window.matchMedia('(pointer: coarse)').matches ? 16 : 6
+}
+
+/**
+ * 地図側の要素を後退させ、Place のピンが主役になるようにする。
+ * 存在しないレイヤーIDは無視する（provider を替えても壊れない）。
+ */
+function muteBasemap(map: MapLibreMap) {
+  for (const id of basemapAdjustments.hide) {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none')
+  }
+
+  for (const { id, opacity } of basemapAdjustments.dim) {
+    if (!map.getLayer(id)) continue
+    map.setPaintProperty(id, 'text-opacity', opacity)
+    map.setPaintProperty(id, 'icon-opacity', opacity)
+  }
 }
 
 /**
