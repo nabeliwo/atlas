@@ -14,7 +14,12 @@ export const Route = createRootRoute({
         content:
           'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover',
       },
-      { title: 'Atlas — 行った場所の地図' },
+      /*
+       * 実際のタイトルは `/` 側でプロフィールの表示名から作る
+       * （`/admin` で名前を変えたときにズレないようにするため）。
+       * ここはプロフィール未登録時とその他のページのための控えの値。
+       */
+      { title: '行った場所の地図' },
       {
         name: 'description',
         content:
@@ -25,8 +30,7 @@ export const Route = createRootRoute({
        * 何のページか分かるようにしておく（docs/01-product-spec.md「URL共有」）。
        */
       { property: 'og:type', content: 'website' },
-      { property: 'og:site_name', content: 'Atlas' },
-      { property: 'og:title', content: 'Atlas — 行った場所の地図' },
+      { property: 'og:title', content: '行った場所の地図' },
       {
         property: 'og:description',
         content: '行った場所を地図に記録しています。',

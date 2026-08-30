@@ -16,6 +16,7 @@ import { getProfile } from '@/server/profile'
  * 許可されたGoogleアカウントかどうかをサーバー側で判定して表示を分ける。
  */
 export const Route = createFileRoute('/admin')({
+  head: () => ({ meta: [{ title: '管理' }] }),
   loader: async () => {
     const status = await getAdminStatus()
     // 管理者以外にプロフィールの編集内容を渡す必要はない

@@ -61,6 +61,18 @@ export const Route = createFileRoute('/')({
     ])
     return { places, isAdmin, profile }
   },
+  /**
+   * タイトルはプロフィールの表示名から作る。
+   * 誰の地図なのかが、タブと共有先の両方で分かるようにする。
+   */
+  head: ({ loaderData }) => {
+    const name = loaderData?.profile?.displayName
+    const title = name ? `${name} が行った場所` : '行った場所の地図'
+    return {
+      meta: [{ title }, { property: 'og:title', content: title }],
+    }
+  },
+
   component: HomePage,
 })
 
