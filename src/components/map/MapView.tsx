@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
 
-import { basemapAdjustments, mapConfig } from '@/lib/map-config'
+import { basemapAdjustments, mapConfig, worldFillZoom } from '@/lib/map-config'
 import type { MapPlace } from '@/server/places'
 import {
   CLUSTER_COUNT_LAYER_ID,
@@ -58,11 +58,20 @@ export function MapView({ places, selectedPlaceId, onSelectPlace }: MapViewProps
       const { Map, NavigationControl } = await import('maplibre-gl')
       if (cancelled) return
 
+      /*
+       * 初期表示は「世界が画面幅にちょうど収まる」ズームにする。
+       * 固定値だと、画面が広いほど世界が2枚並んで見えてしまう。
+       * 引いたあとに複製が見えるのは地図として自然なので、そこは触らない。
+       */
+      const width = container.clientWidth
+      const initialZoom =
+        width > 0 ? worldFillZoom(width) : mapConfig.initialView.zoom
+
       const map = new Map({
         container,
         style: mapConfig.styleUrl,
         center: mapConfig.initialView.center,
-        zoom: mapConfig.initialView.zoom,
+        zoom: initialZoom,
         minZoom: mapConfig.minZoom,
         maxZoom: mapConfig.maxZoom,
         attributionControl: { compact: true },
