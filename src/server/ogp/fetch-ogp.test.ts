@@ -124,6 +124,45 @@ describe('fetchOgp', () => {
     expect(await fetchOgp('https://example.com/a.png')).toBeNull()
   })
 
+  it('head が巨大で og タグが後ろにあっても拾える', async () => {
+    /*
+     * Google フォトの共有ページは <head> に 1MB 超のインラインデータを持ち、
+     * og タグはその後ろにある。読み込み上限が足りないと取りこぼす。
+     */
+    const filler = `<script>${'x'.repeat(900_000)}</script>`
+    const body = `<html><head>${filler}<meta property="og:title" content="奥にある題名"><meta property="og:image" content="https://example.com/p.jpg"></head><body>y</body></html>`
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(body, {
+          headers: { 'content-type': 'text/html; charset=utf-8' },
+        }),
+      ),
+    )
+
+    const result = await fetchOgp('https://example.com/big')
+    expect(result?.title).toBe('奥にある題名')
+    expect(result?.imageUrl).toBe('https://example.com/p.jpg')
+  })
+
+  it('上限を超えた先にある og タグは諦める', async () => {
+    // 際限なく読まないことの確認。2MB を超える位置には届かない。
+    const filler = `<script>${'x'.repeat(2_200_000)}</script>`
+    const body = `<html><head>${filler}<meta property="og:title" content="遠すぎる"></head></html>`
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(body, {
+          headers: { 'content-type': 'text/html; charset=utf-8' },
+        }),
+      ),
+    )
+
+    expect(await fetchOgp('https://example.com/huge')).toBeNull()
+  })
+
   it('meta が何も無ければ null', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => htmlResponse('<head></head><body>x</body>')))
     expect(await fetchOgp('https://example.com/')).toBeNull()

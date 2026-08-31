@@ -20,8 +20,19 @@ export type OgpMetadata = {
   siteName?: string
 }
 
-/** head だけ読めれば十分なので、本文まで読み込まない。 */
-const MAX_BYTES = 256 * 1024
+/**
+ * head の終わりまでに読む上限。
+ *
+ * 当初 256KB にしていたが、Google フォトの共有ページは <head> の中に
+ * 1MB 以上のインラインデータを持っていて、og タグはその後ろにある
+ * （実測で og:title が 1,095KB 地点、</head> が 1,149KB 地点）。
+ * 写真を外部に置いてリンクするのはこのアプリの中心的な使い方なので、
+ * そこに届く上限にしてある。
+ */
+const MAX_BYTES = 2 * 1024 * 1024
+
+/** タグがチャンクの境界で割れるため、末尾をこのぶんだけ次へ持ち越す。 */
+const CHUNK_CARRY = 1024
 const TIMEOUT_MS = 5000
 const MAX_REDIRECTS = 3
 
@@ -39,7 +50,7 @@ export async function fetchOgp(rawUrl: string): Promise<OgpMetadata | null> {
       return null
     }
 
-    const html = await readCapped(response, MAX_BYTES)
+    const html = await readHeadFragments(response, MAX_BYTES)
     if (!html) return null
 
     return extractMetadata(html, response.url || initial.url.toString())
@@ -80,13 +91,26 @@ async function fetchWithCheckedRedirects(url: URL): Promise<Response | null> {
   return null
 }
 
-/** 上限までで打ち切って読む。Content-Length を信用しない。 */
-async function readCapped(response: Response, limit: number): Promise<string | null> {
+/**
+ * head を読みながら、meta を含む部分だけを集める。
+ *
+ * 全体を1つの文字列に連結してから正規表現をかけると、1MB級のページで
+ * CPU を使いすぎる（Workers の無料枠は1リクエスト 10ms CPU）。
+ * チャンクごとに安価な部分文字列検索でふるいにかけ、タグが含まれる
+ * ものだけを残すことで、正規表現の対象を小さく保つ。
+ *
+ * 上限までで打ち切る。Content-Length は信用しない。
+ */
+async function readHeadFragments(
+  response: Response,
+  limit: number,
+): Promise<string | null> {
   const reader = response.body?.getReader()
   if (!reader) return null
 
   const decoder = new TextDecoder()
-  let text = ''
+  const fragments: Array<string> = []
+  let carry = ''
   let size = 0
 
   while (size < limit) {
@@ -94,15 +118,32 @@ async function readCapped(response: Response, limit: number): Promise<string | n
     if (done) break
     if (!value) continue
 
-    size += value.byteLength
-    text += decoder.decode(value, { stream: true })
+    /*
+     * 上限をまたぐチャンクは切り詰める。1回の read で上限を大きく超える
+     * 塊が届いても、処理量が上限を超えないようにするため。
+     */
+    const remaining = limit - size
+    const chunk =
+      value.byteLength > remaining ? value.subarray(0, remaining) : value
+    const reachedLimit = value.byteLength > remaining
+
+    size += chunk.byteLength
+    const text = carry + decoder.decode(chunk, { stream: !reachedLimit })
 
     // head を抜けたらそれ以上読む必要がない
-    if (text.includes('</head>')) break
+    const headEnd = text.search(/<\/head>/i)
+    const scan = headEnd >= 0 ? text.slice(0, headEnd) : text
+
+    if (scan.includes('<meta') || scan.includes('<title')) {
+      fragments.push(scan)
+    }
+    if (headEnd >= 0 || reachedLimit) break
+
+    carry = text.slice(-CHUNK_CARRY)
   }
 
   await reader.cancel().catch(() => {})
-  return text
+  return fragments.join('')
 }
 
 const META_TAG = /<meta\s+[^>]*>/gi
